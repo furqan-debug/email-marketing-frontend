@@ -12,7 +12,7 @@ export default function NavBar() {
 
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex items-center gap-6">
-      <span className="font-bold text-lg">ðŸ“§ EM Platform</span>
+      <span className="font-bold text-lg">EM Platform</span>
       <Link href="/" className="hover:underline text-sm">Dashboard</Link>
       <Link href="/contacts" className="hover:underline text-sm">Contacts</Link>
       <Link href="/campaigns" className="hover:underline text-sm">Campaigns</Link>
