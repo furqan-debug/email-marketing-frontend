@@ -1,8 +1,84 @@
-﻿import axios from 'axios';
+﻿import type {
+  Workspace, Audience, Contact, PaginatedContacts,
+  Template, Campaign, AnalyticsSnapshot, ImportResult,
+} from "./types"
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-  headers: { 'Content-Type': 'application/json' },
-});
+const BASE = process.env.NEXT_PUBLIC_API_URL || ""
 
-export default api;
+async function req<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (!(options?.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json"
+  }
+  const res = await fetch(`${BASE}${path}`, {
+    credentials: "include",
+    headers: { ...headers, ...(options?.headers as Record<string, string> | undefined) },
+    ...options,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as any).message || `HTTP ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
+// ── Workspaces ───────────────────────────────────────────────────────────────
+export const getWorkspaces = () => req<Workspace[]>("/workspaces")
+
+// ── Audiences ────────────────────────────────────────────────────────────────
+export const getAudiences = (workspaceId?: string) =>
+  req<Audience[]>(`/audiences${workspaceId ? `?workspaceId=${workspaceId}` : ""}`)
+export const getAudience = (id: string) => req<Audience>(`/audiences/${id}`)
+export const createAudience = (body: { name: string; workspaceId: string }) =>
+  req<Audience>("/audiences", { method: "POST", body: JSON.stringify(body) })
+export const deleteAudience = (id: string) =>
+  req<{ id: string; deleted: boolean }>(`/audiences/${id}`, { method: "DELETE" })
+
+// ── Contacts ─────────────────────────────────────────────────────────────────
+export const getContacts = (audienceId: string, page = 1, limit = 50) =>
+  req<PaginatedContacts>(`/contacts?audienceId=${audienceId}&page=${page}&limit=${limit}`)
+export const deleteContact = (id: string) =>
+  req<{ id: string; deleted: boolean }>(`/contacts/${id}`, { method: "DELETE" })
+export const importCsv = async (audienceId: string, file: File): Promise<ImportResult> => {
+  const fd = new FormData()
+  fd.append("file", file)
+  const res = await fetch(`${BASE}/contacts/import?audienceId=${audienceId}`, {
+    credentials: "include",
+    method: "POST",
+    body: fd,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as any).message || `HTTP ${res.status}`)
+  }
+  return res.json() as Promise<ImportResult>
+}
+
+// ── Templates ────────────────────────────────────────────────────────────────
+export const getTemplates = () => req<Template[]>("/templates")
+export const getTemplate = (id: string) => req<Template>(`/templates/${id}`)
+export const createTemplate = (body: { name: string; subject?: string; html: string }) =>
+  req<Template>("/templates", { method: "POST", body: JSON.stringify(body) })
+export const updateTemplate = (id: string, body: Partial<{ name: string; subject: string; html: string }>) =>
+  req<Template>(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(body) })
+export const deleteTemplate = (id: string) =>
+  req<{ id: string; deleted: boolean }>(`/templates/${id}`, { method: "DELETE" })
+
+// ── Campaigns ────────────────────────────────────────────────────────────────
+export const getCampaigns = () => req<Campaign[]>("/campaigns")
+export const getCampaign = (id: string) => req<Campaign>(`/campaigns/${id}`)
+export const createCampaign = (body: {
+  name: string; audienceId: string; subject?: string; fromName?: string
+  htmlBody?: string; templateId?: string
+}) => req<Campaign>("/campaigns", { method: "POST", body: JSON.stringify(body) })
+export const generateMessages = (id: string) =>
+  req<{ created: number; suppressed: number; skipped: number }>(`/campaigns/${id}/generate-messages`, { method: "POST" })
+export const sendCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/send`, { method: "POST" })
+export const pauseCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/pause`, { method: "POST" })
+export const resumeCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/resume`, { method: "POST" })
+export const cancelCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/cancel`, { method: "POST" })
+
+// ── Analytics ────────────────────────────────────────────────────────────────
+export const getAnalytics = (id: string) => req<AnalyticsSnapshot>(`/analytics/campaigns/${id}`)
+export const computeAnalytics = (id: string) =>
+  req<AnalyticsSnapshot>(`/analytics/campaigns/${id}/compute`, { method: "POST" })
