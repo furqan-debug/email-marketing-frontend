@@ -1,20 +1,29 @@
-﻿import type {
+import type {
   Workspace, Audience, Contact, PaginatedContacts,
   Template, Campaign, AnalyticsSnapshot, ImportResult,
 } from "./types"
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || ""
+const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "")
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = {}
-  if (!(options?.body instanceof FormData)) {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  }
+  
+  // Only set Content-Type if there is an actual request body that is not FormData
+  if (options?.body && !(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json"
   }
-  const res = await fetch(`${BASE}${path}`, {
-    credentials: "include",
-    headers: { ...headers, ...(options?.headers as Record<string, string> | undefined) },
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const res = await fetch(`${BASE}${normalizedPath}`, {
     ...options,
+    headers: {
+      ...headers,
+      ...(options?.headers as Record<string, string> | undefined),
+    },
   })
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as any).message || `HTTP ${res.status}`)
@@ -43,7 +52,6 @@ export const importCsv = async (audienceId: string, file: File): Promise<ImportR
   const fd = new FormData()
   fd.append("file", file)
   const res = await fetch(`${BASE}/contacts/import?audienceId=${audienceId}`, {
-    credentials: "include",
     method: "POST",
     body: fd,
   })
