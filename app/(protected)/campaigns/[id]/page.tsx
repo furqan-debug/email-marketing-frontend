@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
@@ -54,8 +54,22 @@ export default function CampaignDetailPage() {
         getCampaign(id),
         getAnalytics(id),
       ])
-      if (cRes.status === 'fulfilled') setCampaign(cRes.value)
-      if (aRes.status === 'fulfilled') setAnalytics(aRes.value)
+      let cData = cRes.status === 'fulfilled' ? cRes.value : null
+      let aData = aRes.status === 'fulfilled' ? aRes.value : null
+
+      if (cData) setCampaign(cData)
+      if (aData) setAnalytics(aData)
+
+      // Auto-compute fresh analytics if snapshot is missing, stale, or has 0 sent while completed
+      if (
+        cData &&
+        (cData.status === 'COMPLETED' || cData.status === 'SENDING') &&
+        (!aData || aData.staleWarning || aData.sent === 0 || !aData.computedAt)
+      ) {
+        computeAnalytics(id)
+          .then((fresh) => setAnalytics(fresh))
+          .catch(() => null)
+      }
     } catch (err: any) {
       console.error(err)
     } finally {
@@ -308,7 +322,7 @@ export default function CampaignDetailPage() {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle className="text-xs font-semibold">Snapshot Data Warning</AlertTitle>
           <AlertDescription className="text-xs">
-            Analytics were last computed more than 30 minutes ago ({analytics.computedAt ? new Date(analytics.computedAt).toLocaleTimeString() : 'never'}). Click &quot;Refresh Analytics&quot; to fetch the latest SES events.
+            Analytics were last computed more than 30 minutes ago ({analytics.computedAt && new Date(analytics.computedAt).getFullYear() > 2020 ? new Date(analytics.computedAt).toLocaleTimeString() : 'recently'}). Click &quot;Refresh Analytics&quot; to fetch the latest SES events.
           </AlertDescription>
         </Alert>
       )}
@@ -317,9 +331,9 @@ export default function CampaignDetailPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Engagement & Delivery Analytics</h2>
-          {analytics?.computedAt && (
+          {analytics?.computedAt && new Date(analytics.computedAt).getFullYear() > 2020 && (
             <span className="text-xs text-muted-foreground">
-              Last synced: {new Date(analytics.computedAt).toLocaleString()}
+              Last synced: {new Date(analytics.computedAt).toLocaleDateString()}, {new Date(analytics.computedAt).toLocaleTimeString()}
             </span>
           )}
         </div>
