@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -341,7 +341,7 @@ export default function NewCampaignPage() {
                     className="font-mono text-xs min-h-[220px] bg-slate-950 text-slate-50 p-4"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Tip: Use <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;first_name&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;last_name&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;email&#125;&#125;</code> for per-contact dynamic merge values.
+                    Tip: Use <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;first_name&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;last_name&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;email&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;title&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;company_name&#125;&#125;</code>, or any custom tags defined in your audience.
                   </p>
                 </TabsContent>
               </Tabs>

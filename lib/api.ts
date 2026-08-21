@@ -1,6 +1,7 @@
 import type {
   Workspace, Audience, Contact, PaginatedContacts,
   Template, Campaign, AnalyticsSnapshot, ImportResult,
+  ColumnMapping,
 } from "./types"
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "")
@@ -48,9 +49,16 @@ export const getContacts = (audienceId: string, page = 1, limit = 50) =>
   req<PaginatedContacts>(`/contacts?audienceId=${audienceId}&page=${page}&limit=${limit}`)
 export const deleteContact = (id: string) =>
   req<{ id: string; deleted: boolean }>(`/contacts/${id}`, { method: "DELETE" })
-export const importCsv = async (audienceId: string, file: File): Promise<ImportResult> => {
+export const importCsv = async (
+  audienceId: string,
+  file: File,
+  mapping?: ColumnMapping,
+): Promise<ImportResult> => {
   const fd = new FormData()
   fd.append("file", file)
+  if (mapping) {
+    fd.append("mapping", JSON.stringify(mapping))
+  }
   const res = await fetch(`${BASE}/contacts/import?audienceId=${audienceId}`, {
     method: "POST",
     body: fd,

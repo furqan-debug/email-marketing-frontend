@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { 
@@ -358,7 +358,10 @@ export default function TemplatesPage() {
 
                   {/* Merge Tags Helper */}
                   <div className="flex items-center gap-2 flex-wrap text-xs bg-muted/40 p-2.5 rounded-lg border">
-                    <span className="font-semibold text-muted-foreground">Insert Merge Tags:</span>
+                    <span className="font-semibold text-muted-foreground flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      Merge Tags:
+                    </span>
                     <Button 
                       type="button" 
                       variant="outline" 
@@ -385,6 +388,24 @@ export default function TemplatesPage() {
                       onClick={() => insertTag('{{email}}')}
                     >
                       &#123;&#123;email&#125;&#125;
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-xs px-2 bg-primary/5 border-primary/20"
+                      onClick={() => insertTag('{{title}}')}
+                    >
+                      &#123;&#123;title&#125;&#125;
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-xs px-2 bg-primary/5 border-primary/20"
+                      onClick={() => insertTag('{{company_name}}')}
+                    >
+                      &#123;&#123;company_name&#125;&#125;
                     </Button>
                   </div>
 

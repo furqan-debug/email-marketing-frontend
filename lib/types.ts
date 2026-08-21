@@ -1,4 +1,4 @@
-﻿export interface Workspace {
+export interface Workspace {
   id: string
   name: string
 }
@@ -15,7 +15,15 @@ export interface Contact {
   email: string
   firstName?: string | null
   lastName?: string | null
+  attributes?: Record<string, any> | null
   audienceId: string
+}
+
+export interface ColumnMapping {
+  email?: string
+  firstName?: string
+  lastName?: string
+  attributes?: Record<string, string>
 }
 
 export interface PaginatedContacts {
