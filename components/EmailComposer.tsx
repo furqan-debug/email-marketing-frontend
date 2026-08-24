@@ -8,6 +8,7 @@ import {
   Strikethrough,
   Heading1,
   Heading2,
+  Heading3,
   List,
   ListOrdered,
   Quote,
@@ -24,7 +25,8 @@ import {
   Undo,
   Redo,
   Smartphone,
-  Monitor
+  Monitor,
+  RemoveFormatting
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -54,11 +56,33 @@ export default function EmailComposer({
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
   const editorRef = useRef<HTMLDivElement>(null)
   const isInternalUpdate = useRef(false)
+  const savedRangeRef = useRef<Range | null>(null)
 
-  // Initialize and sync visual editor content
+  // Save current selection whenever user types or clicks inside the editor
+  const saveSelection = () => {
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
+      savedRangeRef.current = sel.getRangeAt(0)
+    }
+  }
+
+  // Restore saved selection
+  const restoreSelection = () => {
+    if (savedRangeRef.current) {
+      const sel = window.getSelection()
+      if (sel) {
+        sel.removeAllRanges()
+        sel.addRange(savedRangeRef.current)
+      }
+    } else if (editorRef.current) {
+      editorRef.current.focus()
+    }
+  }
+
+  // Sync external value changes into contentEditable (only when not typing internally)
   useEffect(() => {
     if (editorRef.current && !isInternalUpdate.current) {
-      if (editorRef.current.innerHTML !== value) {
+      if (editorRef.current.innerHTML !== (value || '')) {
         editorRef.current.innerHTML = value || ''
       }
     }
@@ -69,26 +93,45 @@ export default function EmailComposer({
     if (editorRef.current) {
       isInternalUpdate.current = true
       const html = editorRef.current.innerHTML
-      onChange(html)
+      onChange(html === '<p><br></p>' || html === '<br>' ? '' : html)
+      saveSelection()
     }
   }, [onChange])
 
-  // Execute formatting command
+  // Execute formatting command without losing selection focus
   const execCmd = (cmd: string, val: string | undefined = undefined) => {
-    document.execCommand(cmd, false, val)
     if (editorRef.current) {
       editorRef.current.focus()
+      restoreSelection()
+      
+      try {
+        if (cmd === 'formatBlock' && val) {
+          // Cross-browser formatBlock support
+          const success = document.execCommand('formatBlock', false, val)
+          if (!success) {
+            document.execCommand('formatBlock', false, val.replace(/[<>]/g, ''))
+          }
+        } else {
+          document.execCommand(cmd, false, val)
+        }
+      } catch (err) {
+        console.warn('execCommand failed:', cmd, err)
+      }
+
       handleVisualInput()
+      saveSelection()
     }
   }
 
-  // Insert merge tag or HTML snippet at current selection
+  // Insert merge tag at current selection
   const insertSnippet = (snippet: string) => {
     if (activeTab === 'visual') {
       if (editorRef.current) {
         editorRef.current.focus()
+        restoreSelection()
         document.execCommand('insertText', false, snippet)
         handleVisualInput()
+        saveSelection()
       }
     } else if (activeTab === 'code') {
       onChange(value + snippet)
@@ -96,21 +139,26 @@ export default function EmailComposer({
   }
 
   const insertLink = () => {
-    const url = window.prompt('Enter URL:', 'https://')
-    if (url) {
-      execCmd('createLink', url)
+    saveSelection()
+    const url = window.prompt('Enter URL link (e.g. https://digireps.org):', 'https://')
+    if (url && url.trim()) {
+      execCmd('createLink', url.trim())
     }
   }
 
   const insertButton = () => {
+    saveSelection()
     const text = window.prompt('Button Text:', 'Click Here')
     if (!text) return
     const url = window.prompt('Button URL:', 'https://') || '#'
-    const buttonHtml = `&nbsp;<a href="${url}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-family:sans-serif;margin:8px 0;">${text}</a>&nbsp;`
+    const buttonHtml = `&nbsp;<a href="${url}" style="display:inline-block;padding:12px 24px;background-color:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-family:sans-serif;margin:12px 0;">${text}</a>&nbsp;`
+    
     if (activeTab === 'visual' && editorRef.current) {
       editorRef.current.focus()
+      restoreSelection()
       document.execCommand('insertHTML', false, buttonHtml)
       handleVisualInput()
+      saveSelection()
     } else {
       onChange(value + buttonHtml)
     }
@@ -180,6 +228,7 @@ export default function EmailComposer({
             <button
               key={t.tag}
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => insertSnippet(t.tag)}
               className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors px-2 py-0.5 rounded font-mono text-[11px] font-medium"
               title={`Click to insert ${t.tag} at cursor`}
@@ -192,12 +241,16 @@ export default function EmailComposer({
 
       {/* Visual Formatting Toolbar (Only in Visual Mode) */}
       {activeTab === 'visual' && (
-        <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b bg-muted/20 text-muted-foreground">
+        <div 
+          className="flex flex-wrap items-center gap-1 px-3 py-2 border-b bg-muted/20 text-muted-foreground select-none"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('bold')}
             title="Bold (Ctrl+B)"
           >
@@ -207,7 +260,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('italic')}
             title="Italic (Ctrl+I)"
           >
@@ -217,7 +271,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('underline')}
             title="Underline (Ctrl+U)"
           >
@@ -227,7 +282,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('strikeThrough')}
             title="Strikethrough"
           >
@@ -239,28 +295,31 @@ export default function EmailComposer({
           <Button
             type="button"
             variant="ghost"
-            size="icon"
-            className="h-7 w-7"
+            size="sm"
+            className="h-7 px-2 text-xs font-bold hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('formatBlock', '<h1>')}
             title="Heading 1"
           >
-            <Heading1 className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => execCmd('formatBlock', '<h2>')}
-            title="Heading 2"
-          >
-            <Heading2 className="h-4 w-4" />
+            H1
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs font-semibold"
+            className="h-7 px-2 text-xs font-bold hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execCmd('formatBlock', '<h2>')}
+            title="Heading 2"
+          >
+            H2
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs font-semibold hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('formatBlock', '<p>')}
             title="Paragraph Text"
           >
@@ -273,7 +332,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('justifyLeft')}
             title="Align Left"
           >
@@ -283,7 +343,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('justifyCenter')}
             title="Align Center"
           >
@@ -293,7 +354,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('justifyRight')}
             title="Align Right"
           >
@@ -306,7 +368,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertUnorderedList')}
             title="Bullet List"
           >
@@ -316,7 +379,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertOrderedList')}
             title="Numbered List"
           >
@@ -326,7 +390,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('formatBlock', '<blockquote>')}
             title="Quote Box"
           >
@@ -336,7 +401,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertHorizontalRule')}
             title="Divider Line"
           >
@@ -349,7 +415,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs flex items-center gap-1"
+            className="h-7 px-2 text-xs flex items-center gap-1 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={insertLink}
             title="Insert Link"
           >
@@ -360,12 +427,25 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs flex items-center gap-1 text-primary font-medium"
+            className="h-7 px-2 text-xs flex items-center gap-1 text-primary font-medium hover:bg-primary/10"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={insertButton}
             title="Insert Call-to-Action Button"
           >
             <MousePointerClick className="h-3.5 w-3.5" />
             Add Button
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execCmd('removeFormat')}
+            title="Clear Formatting"
+          >
+            <RemoveFormatting className="h-3.5 w-3.5" />
           </Button>
 
           <div className="h-4 w-px bg-border mx-1 ml-auto" />
@@ -374,7 +454,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('undo')}
             title="Undo (Ctrl+Z)"
           >
@@ -384,7 +465,8 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('redo')}
             title="Redo (Ctrl+Y)"
           >
@@ -400,6 +482,9 @@ export default function EmailComposer({
             ref={editorRef}
             contentEditable
             onInput={handleVisualInput}
+            onKeyUp={saveSelection}
+            onMouseUp={saveSelection}
+            onFocus={saveSelection}
             style={{ minHeight }}
             className="outline-none focus:outline-none prose prose-sm max-w-none font-sans text-foreground leading-relaxed email-content-editable"
             data-placeholder={placeholder}
