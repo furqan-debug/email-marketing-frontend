@@ -8,7 +8,6 @@ import {
   Strikethrough,
   Heading1,
   Heading2,
-  Heading3,
   List,
   ListOrdered,
   Quote,
@@ -19,6 +18,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  AlignJustify,
   Sparkles,
   MousePointerClick,
   Minus,
@@ -26,7 +26,12 @@ import {
   Redo,
   Smartphone,
   Monitor,
-  RemoveFormatting
+  RemoveFormatting,
+  Image as ImageIcon,
+  Smile,
+  Indent,
+  Outdent,
+  ChevronDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -46,6 +51,38 @@ const MERGE_TAGS = [
   { label: 'Unsubscribe Link', tag: '{{unsubscribe}}' },
 ]
 
+const FONTS = [
+  { label: 'Default (Sans Serif)', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Serif (Georgia)', value: 'Georgia, serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Verdana', value: 'Verdana, Geneva, sans-serif' },
+  { label: 'Tahoma', value: 'Tahoma, Geneva, sans-serif' },
+  { label: 'Trebuchet MS', value: '"Trebuchet MS", sans-serif' },
+  { label: 'Monospace (Code)', value: '"Courier New", Courier, monospace' },
+]
+
+const FONT_SIZES = [
+  { label: 'Small (12px)', value: '2' },
+  { label: 'Normal (14px)', value: '3' },
+  { label: 'Large (18px)', value: '5' },
+  { label: 'Huge (24px)', value: '6' },
+]
+
+const TEXT_COLORS = [
+  '#000000', '#334155', '#64748b', '#2563eb', 
+  '#0284c7', '#16a34a', '#dc2626', '#d97706', '#9333ea', '#db2777'
+]
+
+const BG_HIGHLIGHTS = [
+  'transparent', '#fef08a', '#bbf7d0', '#bfdbfe', '#fbcfe8', '#fed7aa', '#e2e8f0'
+]
+
+const EMOJIS = [
+  '😀', '😃', '😄', '😁', '😊', '😍', '🥰', '😘', '😋', '🎉', 
+  '🚀', '🔥', '✨', '💡', '📢', '📧', '✉️', '📦', '🎁', '🏆', 
+  '👍', '👏', '🙌', '🤝', '👋', '⭐', '💯', '🎯', '💼', '📈'
+]
+
 export default function EmailComposer({
   value,
   onChange,
@@ -54,9 +91,18 @@ export default function EmailComposer({
 }: EmailComposerProps) {
   const [activeTab, setActiveTab] = useState<'visual' | 'code' | 'preview'>('visual')
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
+  const [lineSpacing, setLineSpacing] = useState<'normal' | 'compact' | 'relaxed'>('normal')
+  
+  // Popovers state
+  const [showColorPicker, setShowColorPicker] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [imageUrl, setImageUrl] = useState('')
+
   const editorRef = useRef<HTMLDivElement>(null)
   const isInternalUpdate = useRef(false)
   const savedRangeRef = useRef<Range | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Save current selection whenever user types or clicks inside the editor
   const saveSelection = () => {
@@ -129,7 +175,7 @@ export default function EmailComposer({
     }
   }
 
-  // Insert merge tag at current selection
+  // Insert merge tag or text at current selection
   const insertSnippet = (snippet: string) => {
     if (activeTab === 'visual') {
       if (editorRef.current) {
@@ -143,10 +189,27 @@ export default function EmailComposer({
       onChange(value + snippet)
     }
   }
+  const insertText = insertSnippet
+
+
+  // Insert raw HTML
+  const insertHtml = (htmlSnippet: string) => {
+    if (activeTab === 'visual') {
+      if (editorRef.current) {
+        editorRef.current.focus()
+        restoreSelection()
+        document.execCommand('insertHTML', false, htmlSnippet)
+        handleVisualInput()
+        saveSelection()
+      }
+    } else {
+      onChange(value + htmlSnippet)
+    }
+  }
 
   const insertLink = () => {
     saveSelection()
-    const url = window.prompt('Enter URL link (e.g. https://digireps.org):', 'https://')
+    const url = window.prompt('Enter Link URL (e.g. https://digireps.org):', 'https://')
     if (url && url.trim()) {
       execCmd('createLink', url.trim())
     }
@@ -154,20 +217,37 @@ export default function EmailComposer({
 
   const insertButton = () => {
     saveSelection()
-    const text = window.prompt('Button Text:', 'Click Here')
+    const text = window.prompt('Button Text:', 'Explore Now')
     if (!text) return
-    const url = window.prompt('Button URL:', 'https://') || '#'
+    const url = window.prompt('Button Target URL:', 'https://') || '#'
     const buttonHtml = `&nbsp;<a href="${url}" style="display:inline-block;padding:12px 24px;background-color:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-family:sans-serif;margin:12px 0;">${text}</a>&nbsp;`
-    
-    if (activeTab === 'visual' && editorRef.current) {
-      editorRef.current.focus()
-      restoreSelection()
-      document.execCommand('insertHTML', false, buttonHtml)
-      handleVisualInput()
-      saveSelection()
-    } else {
-      onChange(value + buttonHtml)
+    insertHtml(buttonHtml)
+  }
+
+  // Handle Image URL insertion
+  const handleInsertImageUrl = () => {
+    if (!imageUrl.trim()) return
+    const imgHtml = `<p><img src="${imageUrl.trim()}" alt="Image" style="max-width:100%;height:auto;border-radius:6px;margin:8px 0;" /></p>`
+    insertHtml(imgHtml)
+    setImageUrl('')
+    setShowImageModal(false)
+  }
+
+  // Handle local image file upload (Base64 data URL)
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (loadEvent) => {
+      const base64 = loadEvent.target?.result as string
+      if (base64) {
+        const imgHtml = `<p><img src="${base64}" alt="${file.name}" style="max-width:100%;height:auto;border-radius:6px;margin:8px 0;" /></p>`
+        insertHtml(imgHtml)
+        setShowImageModal(false)
+      }
     }
+    reader.readAsDataURL(file)
   }
 
   // Generate clean preview with sample merge tag replacement
@@ -182,9 +262,24 @@ export default function EmailComposer({
     return preview
   }
 
+  // Close floating popovers on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.color-picker-popover') && !target.closest('.color-picker-btn')) {
+        setShowColorPicker(false)
+      }
+      if (!target.closest('.emoji-picker-popover') && !target.closest('.emoji-picker-btn')) {
+        setShowEmojiPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   return (
     <div className="border rounded-lg overflow-hidden bg-background shadow-sm">
-      {/* Top Mode Tabs & Controls */}
+      {/* ── Top Bar: Mode Tabs & Merge Tags ── */}
       <div className="flex flex-wrap items-center justify-between border-b bg-muted/40 px-3 py-2 gap-2">
         <div className="flex items-center gap-1 bg-muted p-0.5 rounded-md border text-xs">
           <button
@@ -245,18 +340,56 @@ export default function EmailComposer({
         </div>
       </div>
 
-      {/* Visual Formatting Toolbar (Only in Visual Mode) */}
+      {/* ── Main Formatting Toolbar (Gmail-Style Rich Controls) ── */}
       {activeTab === 'visual' && (
         <div 
-          className="flex flex-wrap items-center gap-1 px-3 py-2 border-b bg-muted/20 text-muted-foreground select-none"
-          onMouseDown={(e) => e.preventDefault()}
+          className="flex flex-wrap items-center gap-1 px-3 py-2 border-b bg-muted/20 text-muted-foreground select-none relative"
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).tagName !== 'SELECT') {
+              e.preventDefault()
+            }
+          }}
         >
+          {/* 1. Font Family Selector */}
+          <div className="flex items-center">
+            <select
+              className="h-7 text-xs bg-background border rounded px-1.5 py-0 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              onChange={(e) => {
+                execCmd('fontName', e.target.value)
+              }}
+              title="Font Family"
+              defaultValue="Arial, Helvetica, sans-serif"
+            >
+              {FONTS.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2. Font Size Selector */}
+          <div className="flex items-center">
+            <select
+              className="h-7 text-xs bg-background border rounded px-1.5 py-0 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              onChange={(e) => {
+                execCmd('fontSize', e.target.value)
+              }}
+              title="Font Size"
+              defaultValue="3"
+            >
+              {FONT_SIZES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="h-4 w-px bg-border mx-1" />
+
+          {/* 3. Basic Styles (B, I, U, S) */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
+            className="h-7 w-7 hover:text-foreground hover:bg-muted font-bold"
             onClick={() => execCmd('bold')}
             title="Bold (Ctrl+B)"
           >
@@ -267,7 +400,6 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('italic')}
             title="Italic (Ctrl+I)"
           >
@@ -278,7 +410,6 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('underline')}
             title="Underline (Ctrl+U)"
           >
@@ -289,21 +420,86 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('strikeThrough')}
             title="Strikethrough"
           >
             <Strikethrough className="h-4 w-4" />
           </Button>
 
+          {/* 4. Text & Background Color Picker Dropdown */}
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-1.5 text-xs flex items-center gap-1 hover:text-foreground hover:bg-muted color-picker-btn font-bold"
+              onClick={() => {
+                saveSelection()
+                setShowColorPicker(!showColorPicker)
+                setShowEmojiPicker(false)
+              }}
+              title="Text & Highlight Color"
+            >
+              <span className="underline decoration-primary decoration-2">A</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </Button>
+
+            {showColorPicker && (
+              <div 
+                className="absolute top-8 left-0 z-50 bg-popover text-popover-foreground border rounded-lg shadow-xl p-3 w-48 space-y-3 color-picker-popover"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div>
+                  <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">Text Color</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {TEXT_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        style={{ backgroundColor: c }}
+                        className="h-5 w-5 rounded-full border border-black/20 hover:scale-110 transition-transform"
+                        onClick={() => {
+                          execCmd('foreColor', c)
+                          setShowColorPicker(false)
+                        }}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t">
+                  <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">Highlight Background</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {BG_HIGHLIGHTS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        style={{ backgroundColor: c === 'transparent' ? '#ffffff' : c }}
+                        className="h-5 w-5 rounded border border-black/20 flex items-center justify-center text-[9px] hover:scale-110 transition-transform"
+                        onClick={() => {
+                          execCmd('hiliteColor', c)
+                          setShowColorPicker(false)
+                        }}
+                        title={c === 'transparent' ? 'No highlight' : c}
+                      >
+                        {c === 'transparent' ? '✕' : ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="h-4 w-px bg-border mx-1" />
 
+          {/* 5. Headings (H1, H2, P) */}
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs font-bold hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
+            className="h-7 px-1.5 text-xs font-bold hover:text-foreground hover:bg-muted"
             onClick={() => execCmd('formatBlock', '<h1>')}
             title="Heading 1"
           >
@@ -313,8 +509,7 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs font-bold hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
+            className="h-7 px-1.5 text-xs font-bold hover:text-foreground hover:bg-muted"
             onClick={() => execCmd('formatBlock', '<h2>')}
             title="Heading 2"
           >
@@ -324,22 +519,21 @@ export default function EmailComposer({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs font-semibold hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
+            className="h-7 px-1.5 text-xs font-semibold hover:text-foreground hover:bg-muted"
             onClick={() => execCmd('formatBlock', '<p>')}
-            title="Paragraph Text"
+            title="Paragraph"
           >
             P
           </Button>
 
           <div className="h-4 w-px bg-border mx-1" />
 
+          {/* 6. Alignment */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('justifyLeft')}
             title="Align Left"
           >
@@ -350,7 +544,6 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('justifyCenter')}
             title="Align Center"
           >
@@ -361,39 +554,64 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('justifyRight')}
             title="Align Right"
           >
             <AlignRight className="h-4 w-4" />
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onClick={() => execCmd('justifyFull')}
+            title="Justify"
+          >
+            <AlignJustify className="h-4 w-4" />
+          </Button>
 
           <div className="h-4 w-px bg-border mx-1" />
 
-          {/* Bullet List */}
+          {/* 7. Lists & Indents */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertUnorderedList')}
-            title="Bullet Points (List)"
+            title="Bullet Points"
           >
             <List className="h-4 w-4" />
           </Button>
-
-          {/* Numbered List */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertOrderedList')}
-            title="Numbered Points (List)"
+            title="Numbered List"
           >
             <ListOrdered className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onClick={() => execCmd('outdent')}
+            title="Indent Less"
+          >
+            <Outdent className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 hover:text-foreground hover:bg-muted"
+            onClick={() => execCmd('indent')}
+            title="Indent More"
+          >
+            <Indent className="h-4 w-4" />
           </Button>
 
           <Button
@@ -401,7 +619,6 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('formatBlock', '<blockquote>')}
             title="Quote Box"
           >
@@ -412,7 +629,6 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertHorizontalRule')}
             title="Divider Line"
           >
@@ -421,12 +637,87 @@ export default function EmailComposer({
 
           <div className="h-4 w-px bg-border mx-1" />
 
+          {/* 8. Line Spacing Toggle */}
+          <div className="flex items-center">
+            <select
+              className="h-7 text-xs bg-background border rounded px-1 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              value={lineSpacing}
+              onChange={(e) => setLineSpacing(e.target.value as any)}
+              title="Line & Paragraph Spacing"
+            >
+              <option value="compact">Tight Spacing</option>
+              <option value="normal">Normal Spacing</option>
+              <option value="relaxed">Relaxed Spacing</option>
+            </select>
+          </div>
+
+          <div className="h-4 w-px bg-border mx-1" />
+
+          {/* 9. Attach Image */}
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs flex items-center gap-1 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              saveSelection()
+              setShowImageModal(true)
+            }}
+            title="Insert Image"
+          >
+            <ImageIcon className="h-3.5 w-3.5" />
+            Image
+          </Button>
+
+          {/* 10. Emoji Picker Popover */}
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs flex items-center gap-1 hover:text-foreground hover:bg-muted emoji-picker-btn"
+              onClick={() => {
+                saveSelection()
+                setShowEmojiPicker(!showEmojiPicker)
+                setShowColorPicker(false)
+              }}
+              title="Insert Emoji"
+            >
+              <Smile className="h-3.5 w-3.5 text-amber-500" />
+              Emoji
+            </Button>
+
+            {showEmojiPicker && (
+              <div 
+                className="absolute top-8 left-0 z-50 bg-popover text-popover-foreground border rounded-lg shadow-xl p-3 w-64 emoji-picker-popover"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <p className="text-[11px] font-semibold text-muted-foreground mb-2">Click emoji to insert:</p>
+                <div className="grid grid-cols-6 gap-1.5 text-lg">
+                  {EMOJIS.map((em) => (
+                    <button
+                      key={em}
+                      type="button"
+                      className="h-8 w-8 rounded hover:bg-muted flex items-center justify-center hover:scale-125 transition-transform"
+                      onClick={() => {
+                        insertText(em)
+                        setShowEmojiPicker(false)
+                      }}
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 11. Links & Buttons */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs flex items-center gap-1 hover:text-foreground hover:bg-muted"
             onClick={insertLink}
             title="Insert Link"
           >
@@ -438,7 +729,6 @@ export default function EmailComposer({
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs flex items-center gap-1 text-primary font-medium hover:bg-primary/10"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={insertButton}
             title="Insert Call-to-Action Button"
           >
@@ -446,12 +736,12 @@ export default function EmailComposer({
             Add Button
           </Button>
 
+          {/* 12. Clear Formatting */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('removeFormat')}
             title="Clear Formatting"
           >
@@ -460,12 +750,12 @@ export default function EmailComposer({
 
           <div className="h-4 w-px bg-border mx-1 ml-auto" />
 
+          {/* 13. Undo / Redo */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('undo')}
             title="Undo (Ctrl+Z)"
           >
@@ -476,7 +766,6 @@ export default function EmailComposer({
             variant="ghost"
             size="icon"
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('redo')}
             title="Redo (Ctrl+Y)"
           >
@@ -485,7 +774,7 @@ export default function EmailComposer({
         </div>
       )}
 
-      {/* Editor Body */}
+      {/* ── Editor Body ── */}
       <div className="p-4">
         {activeTab === 'visual' && (
           <div
@@ -496,7 +785,13 @@ export default function EmailComposer({
             onMouseUp={saveSelection}
             onFocus={saveSelection}
             style={{ minHeight }}
-            className="outline-none focus:outline-none max-w-none text-foreground leading-relaxed email-content-editable"
+            className={`outline-none focus:outline-none max-w-none text-foreground email-content-editable ${
+              lineSpacing === 'compact' 
+                ? 'spacing-compact' 
+                : lineSpacing === 'relaxed' 
+                ? 'spacing-relaxed' 
+                : 'spacing-normal'
+            }`}
             data-placeholder={placeholder}
           />
         )}
@@ -561,12 +856,93 @@ export default function EmailComposer({
                 dangerouslySetInnerHTML={{
                   __html: getSimulatedPreview(value),
                 }}
-                className="email-content-editable"
+                className={`email-content-editable ${
+                  lineSpacing === 'compact' 
+                    ? 'spacing-compact' 
+                    : lineSpacing === 'relaxed' 
+                    ? 'spacing-relaxed' 
+                    : 'spacing-normal'
+                }`}
               />
             </div>
           </div>
         )}
       </div>
+
+      {/* ── Image Insert Modal ── */}
+      {showImageModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-background border rounded-lg shadow-2xl p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b">
+              <h3 className="font-semibold text-base flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                Insert Image
+              </h3>
+              <button 
+                onClick={() => setShowImageModal(false)}
+                className="text-muted-foreground hover:text-foreground text-sm font-semibold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              {/* Option A: Upload file */}
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  1. Upload from Computer:
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageFileUpload}
+                  className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground my-1">
+                <div className="h-px bg-border flex-1" />
+                <span>OR</span>
+                <div className="h-px bg-border flex-1" />
+              </div>
+
+              {/* Option B: Image URL */}
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  2. Image Web URL:
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/logo.png"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowImageModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleInsertImageUrl}
+                disabled={!imageUrl.trim()}
+              >
+                Insert Image URL
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

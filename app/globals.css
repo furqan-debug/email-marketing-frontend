@@ -144,3 +144,36 @@
   color: #2563eb !important;
   text-decoration: underline !important;
 }
+
+.email-content-editable img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 6px !important;
+  margin: 8px 0 !important;
+  display: inline-block !important;
+}
+
+/* Line Spacing Presets */
+.email-content-editable.spacing-compact p {
+  margin-bottom: 0.25em !important;
+  line-height: 1.3 !important;
+}
+.email-content-editable.spacing-compact {
+  line-height: 1.3 !important;
+}
+
+.email-content-editable.spacing-normal p {
+  margin-bottom: 0.75em !important;
+  line-height: 1.6 !important;
+}
+.email-content-editable.spacing-normal {
+  line-height: 1.6 !important;
+}
+
+.email-content-editable.spacing-relaxed p {
+  margin-bottom: 1.25em !important;
+  line-height: 2.0 !important;
+}
+.email-content-editable.spacing-relaxed {
+  line-height: 2.0 !important;
+}
