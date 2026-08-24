@@ -50,6 +50,8 @@ export interface Campaign {
   audienceId: string
   subject?: string | null
   fromName?: string | null
+  fromEmail?: string | null
+  replyTo?: string | null
   htmlBody?: string | null
   templateId?: string | null
   snapshot?: AnalyticsSnapshot | null

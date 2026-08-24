@@ -84,8 +84,14 @@ export const deleteTemplate = (id: string) =>
 export const getCampaigns = () => req<Campaign[]>("/campaigns")
 export const getCampaign = (id: string) => req<Campaign>(`/campaigns/${id}`)
 export const createCampaign = (body: {
-  name: string; audienceId: string; subject?: string; fromName?: string
-  htmlBody?: string; templateId?: string
+  name: string
+  audienceId: string
+  subject?: string
+  fromName?: string
+  fromEmail?: string
+  replyTo?: string
+  htmlBody?: string
+  templateId?: string
 }) => req<Campaign>("/campaigns", { method: "POST", body: JSON.stringify(body) })
 export const generateMessages = (id: string) =>
   req<{ created: number; suppressed: number; skipped: number }>(`/campaigns/${id}/generate-messages`, { method: "POST" })

@@ -298,14 +298,21 @@ export default function CampaignDetailPage() {
 
       {/* Meta Info Bar */}
       <Card className="bg-muted/30">
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
           <div>
             <span className="font-semibold text-muted-foreground block">Subject Line:</span>
             <span className="text-foreground">{campaign.subject || '—'}</span>
           </div>
           <div>
-            <span className="font-semibold text-muted-foreground block">Sender Name:</span>
-            <span className="text-foreground">{campaign.fromName || 'Default SES Identity'}</span>
+            <span className="font-semibold text-muted-foreground block">Sender (From):</span>
+            <span className="text-foreground">
+              {campaign.fromName ? `"${campaign.fromName}" ` : ''}
+              {campaign.fromEmail ? `<${campaign.fromEmail}>` : '(Default SES)'}
+            </span>
+          </div>
+          <div>
+            <span className="font-semibold text-muted-foreground block">Reply-To:</span>
+            <span className="text-foreground">{campaign.replyTo || campaign.fromEmail || '(Default)'}</span>
           </div>
           <div>
             <span className="font-semibold text-muted-foreground block">Target Audience:</span>

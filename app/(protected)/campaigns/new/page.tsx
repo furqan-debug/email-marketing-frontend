@@ -53,6 +53,8 @@ export default function NewCampaignPage() {
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
   const [fromName, setFromName] = useState('Digireps Team')
+  const [fromEmail, setFromEmail] = useState('')
+  const [replyTo, setReplyTo] = useState('')
   const [audienceId, setAudienceId] = useState('')
   const [contentMode, setContentMode] = useState<'template' | 'custom'>('template')
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
@@ -137,6 +139,8 @@ export default function NewCampaignPage() {
         audienceId,
         subject: subject.trim() || undefined,
         fromName: fromName.trim() || undefined,
+        fromEmail: fromEmail.trim() || undefined,
+        replyTo: replyTo.trim() || undefined,
         templateId: contentMode === 'template' ? selectedTemplateId : undefined,
         htmlBody: contentMode === 'custom' ? customHtml : undefined,
       }
@@ -183,7 +187,7 @@ export default function NewCampaignPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Create New Campaign</h1>
           <p className="text-muted-foreground text-xs mt-0.5">
-            Configure broadcast metadata, recipient list, and email content
+            Configure broadcast metadata, recipient list, sender details, and email content
           </p>
         </div>
       </div>
@@ -220,9 +224,9 @@ export default function NewCampaignPage() {
           {/* Card 1: Setup & Target */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-base">1. Campaign Details & Audience</CardTitle>
+              <CardTitle className="text-base">1. Campaign Details &amp; Sender Configuration</CardTitle>
               <CardDescription>
-                Define the broadcast name, subject line, and recipient list
+                Define the broadcast name, subject line, custom sender email, and recipient list
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -256,6 +260,30 @@ export default function NewCampaignPage() {
                     placeholder="e.g. Digireps Team"
                     value={fromName}
                     onChange={(e) => setFromName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cFromEmail">From Email (Sender Address)</Label>
+                  <Input
+                    id="cFromEmail"
+                    placeholder="e.g. support@digireps.org or team@digireps.org"
+                    value={fromEmail}
+                    onChange={(e) => setFromEmail(e.target.value)}
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Leave blank to use default verified address.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cReplyTo">Reply-To Email (Optional)</Label>
+                  <Input
+                    id="cReplyTo"
+                    placeholder="e.g. support@digireps.org (where recipient replies go)"
+                    value={replyTo}
+                    onChange={(e) => setReplyTo(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
