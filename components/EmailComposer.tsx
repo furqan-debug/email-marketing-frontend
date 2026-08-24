@@ -69,12 +69,14 @@ const FONT_SIZES = [
 ]
 
 const TEXT_COLORS = [
-  '#000000', '#334155', '#64748b', '#2563eb', 
-  '#0284c7', '#16a34a', '#dc2626', '#d97706', '#9333ea', '#db2777'
+  '#000000', '#475569', '#94a3b8', '#ffffff',
+  '#dc2626', '#ea580c', '#d97706', '#16a34a',
+  '#0284c7', '#2563eb', '#7c3aed', '#db2777'
 ]
 
 const BG_HIGHLIGHTS = [
-  'transparent', '#fef08a', '#bbf7d0', '#bfdbfe', '#fbcfe8', '#fed7aa', '#e2e8f0'
+  'transparent', '#fee2e2', '#ffedd5', '#fef3c7',
+  '#dcfce7', '#e0f2fe', '#dbeafe', '#f3e8ff'
 ]
 
 const EMOJIS = [
@@ -95,6 +97,8 @@ export default function EmailComposer({
   
   // Popovers state
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [customTextColor, setCustomTextColor] = useState('#2563eb')
+  const [customBgColor, setCustomBgColor] = useState('#fef08a')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
@@ -446,40 +450,80 @@ export default function EmailComposer({
 
             {showColorPicker && (
               <div 
-                className="absolute top-8 left-0 z-50 bg-popover text-popover-foreground border rounded-lg shadow-xl p-3 w-48 space-y-3 color-picker-popover"
+                className="absolute top-8 left-0 z-50 bg-popover text-popover-foreground border rounded-lg shadow-xl p-3.5 w-64 space-y-3.5 color-picker-popover"
                 onMouseDown={(e) => e.stopPropagation()}
               >
+                {/* Text Color Section */}
                 <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">Text Color</p>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold text-muted-foreground">Text Color</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{customTextColor}</span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1.5 mb-2">
                     {TEXT_COLORS.map((c) => (
                       <button
                         key={c}
                         type="button"
                         style={{ backgroundColor: c }}
-                        className="h-5 w-5 rounded-full border border-black/20 hover:scale-110 transition-transform"
+                        className="h-5 w-5 rounded-md border border-black/20 hover:scale-110 transition-transform shadow-xs"
                         onClick={() => {
+                          setCustomTextColor(c)
                           execCmd('foreColor', c)
-                          setShowColorPicker(false)
                         }}
                         title={c}
                       />
                     ))}
                   </div>
+
+                  {/* Custom Hex / Color Wheel for Text */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <input
+                      type="color"
+                      value={customTextColor.startsWith('#') && customTextColor.length === 7 ? customTextColor : '#000000'}
+                      onChange={(e) => {
+                        setCustomTextColor(e.target.value)
+                        execCmd('foreColor', e.target.value)
+                      }}
+                      className="h-6 w-6 p-0 border rounded cursor-pointer shrink-0 bg-transparent"
+                      title="Click for full color spectrum wheel"
+                    />
+                    <input
+                      type="text"
+                      value={customTextColor}
+                      onChange={(e) => setCustomTextColor(e.target.value)}
+                      placeholder="#hex"
+                      className="h-6 flex-1 text-[11px] font-mono border rounded px-1.5 bg-background text-foreground"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => {
+                        if (customTextColor) execCmd('foreColor', customTextColor)
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
                 </div>
 
+                {/* Highlight Background Section */}
                 <div className="pt-2 border-t">
-                  <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">Highlight Background</p>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold text-muted-foreground">Highlight Background</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{customBgColor}</span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1.5 mb-2">
                     {BG_HIGHLIGHTS.map((c) => (
                       <button
                         key={c}
                         type="button"
                         style={{ backgroundColor: c === 'transparent' ? '#ffffff' : c }}
-                        className="h-5 w-5 rounded border border-black/20 flex items-center justify-center text-[9px] hover:scale-110 transition-transform"
+                        className="h-5 w-5 rounded-md border border-black/20 flex items-center justify-center text-[9px] hover:scale-110 transition-transform shadow-xs"
                         onClick={() => {
+                          setCustomBgColor(c)
                           execCmd('hiliteColor', c)
-                          setShowColorPicker(false)
                         }}
                         title={c === 'transparent' ? 'No highlight' : c}
                       >
@@ -487,9 +531,42 @@ export default function EmailComposer({
                       </button>
                     ))}
                   </div>
+
+                  {/* Custom Hex / Color Wheel for Background */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <input
+                      type="color"
+                      value={customBgColor.startsWith('#') && customBgColor.length === 7 ? customBgColor : '#fef08a'}
+                      onChange={(e) => {
+                        setCustomBgColor(e.target.value)
+                        execCmd('hiliteColor', e.target.value)
+                      }}
+                      className="h-6 w-6 p-0 border rounded cursor-pointer shrink-0 bg-transparent"
+                      title="Click for full color spectrum wheel"
+                    />
+                    <input
+                      type="text"
+                      value={customBgColor}
+                      onChange={(e) => setCustomBgColor(e.target.value)}
+                      placeholder="#hex"
+                      className="h-6 flex-1 text-[11px] font-mono border rounded px-1.5 bg-background text-foreground"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => {
+                        if (customBgColor) execCmd('hiliteColor', customBgColor)
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
+
           </div>
 
           <div className="h-4 w-px bg-border mx-1" />
