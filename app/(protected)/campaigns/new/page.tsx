@@ -362,20 +362,45 @@ export default function NewCampaignPage() {
                       {/* Template Preview */}
                       {selectedTemplateHtml && (
                         <div className="space-y-2 pt-2 border-t">
-                          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                            <Eye className="h-3.5 w-3.5" />
-                            Template Live Preview
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                              <Eye className="h-3.5 w-3.5 text-primary" />
+                              Template Live Preview (Sample Recipient: Alex Morgan)
+                            </div>
+                            <Link
+                              href="/templates"
+                              className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
+                            >
+                              <Edit3 className="h-3 w-3" /> Edit in Templates
+                            </Link>
                           </div>
-                          <div className="border rounded-lg bg-white overflow-hidden shadow-inner max-h-[320px] overflow-y-auto">
-                            <iframe
-                              srcDoc={selectedTemplateHtml.replace(/\{\{first_name\}\}/g, 'Alex').replace(/\{\{last_name\}\}/g, 'Morgan').replace(/\{\{email\}\}/g, 'alex.morgan@example.com')}
-                              title="Campaign Preview"
-                              className="w-full min-h-[260px] border-0"
-                              sandbox="allow-same-origin"
+                          <div className="border rounded-lg bg-white p-6 shadow-xs max-h-[360px] overflow-y-auto">
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: selectedTemplateHtml
+                                  .replace(/\{\{\s*first_name\s*\}\}/gi, 'Alex')
+                                  .replace(/\{\{\s*last_name\s*\}\}/gi, 'Morgan')
+                                  .replace(/\{\{\s*company_name\s*\}\}/gi, 'Acme Corp')
+                                  .replace(/\{\{\s*title\s*\}\}/gi, 'Marketing Director')
+                                  .replace(/\{\{\s*email\s*\}\}/gi, 'alex.morgan@example.com')
+                                  .replace(/\{\{\s*unsubscribe\s*\}\}/gi, '#unsubscribe')
+                              }}
+                              className={`email-content-editable ${
+                                selectedTemplateHtml.includes('line-height: 1.25') || 
+                                selectedTemplateHtml.includes('line-height: 1.3') || 
+                                selectedTemplateHtml.includes('margin-bottom: 4px') || 
+                                selectedTemplateHtml.includes('spacing-compact')
+                                  ? 'spacing-compact'
+                                  : selectedTemplateHtml.includes('line-height: 2') || 
+                                    selectedTemplateHtml.includes('spacing-relaxed')
+                                  ? 'spacing-relaxed'
+                                  : 'spacing-normal'
+                              }`}
                             />
                           </div>
                         </div>
                       )}
+
                     </div>
                   )}
                 </TabsContent>
