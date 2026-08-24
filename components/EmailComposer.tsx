@@ -135,6 +135,26 @@ export default function EmailComposer({
       if (editorRef.current.innerHTML !== (value || '')) {
         editorRef.current.innerHTML = value || ''
       }
+      // Auto-detect saved line spacing from the HTML content
+      if (value) {
+        if (
+          value.includes('line-height: 1.25') || 
+          value.includes('line-height: 1.3') || 
+          value.includes('margin-bottom: 4px') ||
+          value.includes('spacing-compact')
+        ) {
+          setLineSpacing('compact')
+        } else if (
+          value.includes('line-height: 2') || 
+          value.includes('margin-bottom: 18px') || 
+          value.includes('margin-bottom: 20px') ||
+          value.includes('spacing-relaxed')
+        ) {
+          setLineSpacing('relaxed')
+        } else {
+          setLineSpacing('normal')
+        }
+      }
     }
     isInternalUpdate.current = false
   }, [value, activeTab])
@@ -147,6 +167,30 @@ export default function EmailComposer({
       saveSelection()
     }
   }, [onChange])
+
+  // Apply line & paragraph spacing permanently into the HTML
+  const applyLineSpacing = (spacing: 'compact' | 'normal' | 'relaxed') => {
+    setLineSpacing(spacing)
+    if (!editorRef.current) return
+
+    const lineHeight = spacing === 'compact' ? '1.25' : spacing === 'relaxed' ? '2.0' : '1.6'
+    const pMargin = spacing === 'compact' ? '4px' : spacing === 'relaxed' ? '18px' : '10px'
+
+    const blocks = editorRef.current.querySelectorAll('p, div, li, blockquote, h1, h2, h3')
+    if (blocks.length > 0) {
+      blocks.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        htmlEl.style.lineHeight = lineHeight
+        if (htmlEl.tagName === 'P') {
+          htmlEl.style.marginBottom = pMargin
+        }
+      })
+    } else {
+      editorRef.current.style.lineHeight = lineHeight
+    }
+
+    handleVisualInput()
+  }
 
   // Execute formatting command without losing selection focus
   const execCmd = (cmd: string, val: string | undefined = undefined) => {
@@ -719,7 +763,7 @@ export default function EmailComposer({
             <select
               className="h-7 text-xs bg-background border rounded px-1 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary cursor-pointer"
               value={lineSpacing}
-              onChange={(e) => setLineSpacing(e.target.value as any)}
+              onChange={(e) => applyLineSpacing(e.target.value as any)}
               title="Line & Paragraph Spacing"
             >
               <option value="compact">Tight Spacing</option>
