@@ -27,35 +27,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import EmailComposer from '@/components/EmailComposer'
 
-const DEFAULT_SAMPLE_HTML = `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
-    .container { max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 32px; }
-    .header { text-align: center; border-bottom: 1px solid #edf2f7; padding-bottom: 20px; margin-bottom: 24px; }
-    .header h1 { color: #2b6cb0; margin: 0; font-size: 24px; }
-    .button { display: inline-block; padding: 12px 24px; background-color: #3182ce; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px; }
-    .footer { text-align: center; font-size: 12px; color: #718096; margin-top: 32px; border-top: 1px solid #edf2f7; padding-top: 16px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Hello {{first_name}}!</h1>
-    </div>
-    <p>We are thrilled to bring you our latest updates and special announcements.</p>
-    <p>Check out our newly launched features and platform enhancements:</p>
-    <p style="text-align: center;">
-      <a href="https://example.com/explore" class="button">Explore New Features</a>
-    </p>
-    <div class="footer">
-      <p>Sent to {{email}} &middot; All rights reserved</p>
-    </div>
-  </div>
-</body>
-</html>`
-
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,7 +65,7 @@ export default function TemplatesPage() {
     setIsEditing(true)
     setName('')
     setSubject('')
-    setHtml(DEFAULT_SAMPLE_HTML)
+    setHtml('')
     setSaveSuccess(false)
     setEditorError(null)
   }
