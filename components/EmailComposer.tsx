@@ -111,6 +111,12 @@ export default function EmailComposer({
           if (!success) {
             document.execCommand('formatBlock', false, val.replace(/[<>]/g, ''))
           }
+        } else if (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') {
+          // Ensure editor is ready for list command
+          if (!editorRef.current.innerHTML || editorRef.current.innerHTML === '<br>') {
+            editorRef.current.innerHTML = '<p></p>'
+          }
+          document.execCommand(cmd, false, val)
         } else {
           document.execCommand(cmd, false, val)
         }
@@ -364,6 +370,7 @@ export default function EmailComposer({
 
           <div className="h-4 w-px bg-border mx-1" />
 
+          {/* Bullet List */}
           <Button
             type="button"
             variant="ghost"
@@ -371,10 +378,12 @@ export default function EmailComposer({
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertUnorderedList')}
-            title="Bullet List"
+            title="Bullet Points (List)"
           >
             <List className="h-4 w-4" />
           </Button>
+
+          {/* Numbered List */}
           <Button
             type="button"
             variant="ghost"
@@ -382,10 +391,11 @@ export default function EmailComposer({
             className="h-7 w-7 hover:text-foreground hover:bg-muted"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => execCmd('insertOrderedList')}
-            title="Numbered List"
+            title="Numbered Points (List)"
           >
             <ListOrdered className="h-4 w-4" />
           </Button>
+
           <Button
             type="button"
             variant="ghost"
@@ -486,7 +496,7 @@ export default function EmailComposer({
             onMouseUp={saveSelection}
             onFocus={saveSelection}
             style={{ minHeight }}
-            className="outline-none focus:outline-none prose prose-sm max-w-none font-sans text-foreground leading-relaxed email-content-editable"
+            className="outline-none focus:outline-none max-w-none text-foreground leading-relaxed email-content-editable"
             data-placeholder={placeholder}
           />
         )}
@@ -551,7 +561,7 @@ export default function EmailComposer({
                 dangerouslySetInnerHTML={{
                   __html: getSimulatedPreview(value),
                 }}
-                className="prose prose-sm max-w-none"
+                className="email-content-editable"
               />
             </div>
           </div>
