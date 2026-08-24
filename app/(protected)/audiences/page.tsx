@@ -333,20 +333,13 @@ export default function AudiencesPage() {
             <DialogTitle>Delete Audience</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete <strong>"{deleteConfirmName}"</strong>?
-              This action cannot be undone and will remove all contacts in this audience.
+              This will permanently delete this audience, all its contacts, and any linked campaign broadcasts.
             </DialogDescription>
           </DialogHeader>
           {deleteError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {deleteError}
-                {deleteError.includes('campaign') && (
-                  <span className="block mt-1">
-                    Go to the <a href="/campaigns" className="underline font-medium">Campaigns page</a> and delete or reassign those campaigns first.
-                  </span>
-                )}
-              </AlertDescription>
+              <AlertDescription>{deleteError}</AlertDescription>
             </Alert>
           )}
           <DialogFooter className="gap-2">
