@@ -14,7 +14,8 @@ import {
   Loader2, 
   Sparkles,
   Play,
-  Save
+  Save,
+  Edit3
 } from 'lucide-react'
 import { 
   getAudiences, 
@@ -40,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import EmailComposer from '@/components/EmailComposer'
 
 export default function NewCampaignPage() {
   const router = useRouter()
@@ -325,8 +327,8 @@ export default function NewCampaignPage() {
                     Use Saved Template
                   </TabsTrigger>
                   <TabsTrigger value="custom" className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    Custom HTML Body
+                    <Edit3 className="h-4 w-4" />
+                    Compose Email / Custom Body
                   </TabsTrigger>
                 </TabsList>
 
@@ -340,57 +342,54 @@ export default function NewCampaignPage() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <Label htmlFor="templateSelect">Select Template</Label>
-                      <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
-                        <SelectTrigger id="templateSelect">
-                          <SelectValue placeholder="Choose a template..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {templates.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name} {t.subject ? `(${t.subject})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="templateSelect">Select Template</Label>
+                        <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
+                          <SelectTrigger id="templateSelect">
+                            <SelectValue placeholder="Choose a template..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.map((t) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.name} {t.subject ? `(${t.subject})` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Template Preview */}
+                      {selectedTemplateHtml && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                            <Eye className="h-3.5 w-3.5" />
+                            Template Live Preview
+                          </div>
+                          <div className="border rounded-lg bg-white overflow-hidden shadow-inner max-h-[320px] overflow-y-auto">
+                            <iframe
+                              srcDoc={selectedTemplateHtml.replace(/\{\{first_name\}\}/g, 'Alex').replace(/\{\{last_name\}\}/g, 'Morgan').replace(/\{\{email\}\}/g, 'alex.morgan@example.com')}
+                              title="Campaign Preview"
+                              className="w-full min-h-[260px] border-0"
+                              sandbox="allow-same-origin"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </TabsContent>
 
-                {/* Mode 2: Custom HTML */}
+                {/* Mode 2: Compose Email */}
                 <TabsContent value="custom" className="space-y-3">
-                  <Label htmlFor="customHtml">Custom HTML</Label>
-                  <Textarea
-                    id="customHtml"
+                  <EmailComposer
                     value={customHtml}
-                    onChange={(e) => setCustomHtml(e.target.value)}
-                    placeholder="<html><body><h1>Hello {{first_name}}</h1><p>Your message...</p></body></html>"
-                    className="font-mono text-xs min-h-[220px] bg-slate-950 text-slate-50 p-4"
+                    onChange={setCustomHtml}
+                    placeholder="Type your email broadcast message here..."
+                    minHeight="260px"
                   />
-                  <p className="text-[11px] text-muted-foreground">
-                    Tip: Use <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;first_name&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;last_name&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;email&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;title&#125;&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded">&#123;&#123;company_name&#125;&#125;</code>, or any custom tags defined in your audience.
-                  </p>
                 </TabsContent>
               </Tabs>
-
-              {/* Live Preview Box */}
-              {activeHtmlPreview && (
-                <div className="mt-4 pt-4 border-t space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                    <Eye className="h-3.5 w-3.5" />
-                    Live Content Preview
-                  </div>
-                  <div className="border rounded-lg bg-white overflow-hidden shadow-inner max-h-[320px] overflow-y-auto">
-                    <iframe
-                      srcDoc={activeHtmlPreview.replace(/\{\{first_name\}\}/g, 'Recipient').replace(/\{\{last_name\}\}/g, 'User').replace(/\{\{email\}\}/g, 'recipient@example.com')}
-                      title="Campaign Preview"
-                      className="w-full min-h-[280px] border-0"
-                      sandbox="allow-same-origin"
-                    />
-                  </div>
-                </div>
-              )}
             </CardContent>
 
             <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/20 border-t pt-4">

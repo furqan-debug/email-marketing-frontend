@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import EmailComposer from '@/components/EmailComposer'
 
 const DEFAULT_SAMPLE_HTML = `<!DOCTYPE html>
 <html>
@@ -356,96 +357,16 @@ export default function TemplatesPage() {
                     </div>
                   </div>
 
-                  {/* Merge Tags Helper */}
-                  <div className="flex items-center gap-2 flex-wrap text-xs bg-muted/40 p-2.5 rounded-lg border">
-                    <span className="font-semibold text-muted-foreground flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      Merge Tags:
-                    </span>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-6 text-xs px-2"
-                      onClick={() => insertTag('{{first_name}}')}
-                    >
-                      &#123;&#123;first_name&#125;&#125;
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-6 text-xs px-2"
-                      onClick={() => insertTag('{{last_name}}')}
-                    >
-                      &#123;&#123;last_name&#125;&#125;
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-6 text-xs px-2"
-                      onClick={() => insertTag('{{email}}')}
-                    >
-                      &#123;&#123;email&#125;&#125;
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-6 text-xs px-2 bg-primary/5 border-primary/20"
-                      onClick={() => insertTag('{{title}}')}
-                    >
-                      &#123;&#123;title&#125;&#125;
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-6 text-xs px-2 bg-primary/5 border-primary/20"
-                      onClick={() => insertTag('{{company_name}}')}
-                    >
-                      &#123;&#123;company_name&#125;&#125;
-                    </Button>
+                  {/* Visual & Code Email Composer */}
+                  <div className="space-y-1.5 pt-2">
+                    <Label>Email Content &amp; Formatting</Label>
+                    <EmailComposer
+                      value={html}
+                      onChange={setHtml}
+                      placeholder="Write your email template content here..."
+                      minHeight="380px"
+                    />
                   </div>
-
-                  {/* Editor & Preview Tabs */}
-                  <Tabs defaultValue="editor" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="editor" className="flex items-center gap-2">
-                        <Code2 className="h-4 w-4" />
-                        HTML Source
-                      </TabsTrigger>
-                      <TabsTrigger value="preview" className="flex items-center gap-2">
-                        <Eye className="h-4 w-4" />
-                        Live Preview
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="editor" className="mt-3">
-                      <Textarea
-                        value={html}
-                        onChange={(e) => setHtml(e.target.value)}
-                        placeholder="<html><body>...</body></html>"
-                        className="font-mono text-xs min-h-[420px] bg-slate-950 text-slate-50 p-4 rounded-lg focus-visible:ring-1 leading-relaxed"
-                        spellCheck={false}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="preview" className="mt-3">
-                      <div className="border rounded-lg bg-white overflow-hidden shadow-inner min-h-[420px]">
-                        <iframe
-                          srcDoc={html.replace(/\{\{first_name\}\}/g, 'Alex').replace(/\{\{last_name\}\}/g, 'Smith').replace(/\{\{email\}\}/g, 'alex.smith@example.com')}
-                          title="Live Preview"
-                          className="w-full min-h-[420px] border-0"
-                          sandbox="allow-same-origin"
-                        />
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                        Simulating with placeholder contact: <span className="font-semibold">Alex Smith</span> (alex.smith@example.com)
-                      </p>
-                    </TabsContent>
-                  </Tabs>
                 </CardContent>
               </form>
             </Card>
