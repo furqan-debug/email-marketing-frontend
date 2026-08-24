@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -8,12 +8,14 @@ import {
   RefreshCw, 
   AlertCircle, 
   ChevronRight, 
+  Trash2,
+  Loader2,
   Eye, 
   MousePointerClick, 
   BarChart3,
   Clock
 } from 'lucide-react'
-import { getCampaigns } from '@/lib/api'
+import { getCampaigns, deleteCampaign } from '@/lib/api'
 import type { Campaign } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,12 +23,26 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { formatRate } from '@/lib/utils'
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Delete State
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleteConfirmName, setDeleteConfirmName] = useState<string>('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function loadCampaignsList() {
     setLoading(true)
@@ -38,6 +54,30 @@ export default function CampaignsPage() {
       setError(err.message || 'Failed to load campaigns')
     } finally {
       setLoading(false)
+    }
+  }
+
+  function handleDelete(id: string, name: string, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setDeleteConfirmId(id)
+    setDeleteConfirmName(name)
+    setDeleteError(null)
+  }
+
+  async function confirmDelete() {
+    if (!deleteConfirmId) return
+    setDeletingId(deleteConfirmId)
+    setDeleteError(null)
+    try {
+      await deleteCampaign(deleteConfirmId)
+      setDeleteConfirmId(null)
+      setDeleteConfirmName('')
+      await loadCampaignsList()
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete campaign.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -179,12 +219,28 @@ export default function CampaignsPage() {
                         {snap ? formatRate(openRate) : '—'}
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/campaigns/${c.id}`}>
-                            Analytics
-                            <ChevronRight className="ml-1 h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/campaigns/${c.id}`}>
+                              Analytics
+                              <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            disabled={deletingId === c.id}
+                            onClick={(e) => handleDelete(c.id, c.name, e)}
+                            title="Delete campaign"
+                          >
+                            {deletingId === c.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -194,6 +250,44 @@ export default function CampaignsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => {
+        if (!open) { setDeleteConfirmId(null); setDeleteConfirmName(''); setDeleteError(null) }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Campaign</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>"{deleteConfirmName}"</strong>?
+              This will permanently delete the campaign, all queued/sent message records, tracking events, and analytics snapshots.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{deleteError}</AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setDeleteConfirmId(null); setDeleteConfirmName(''); setDeleteError(null) }}
+              disabled={!!deletingId}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={!!deletingId}
+            >
+              {deletingId ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

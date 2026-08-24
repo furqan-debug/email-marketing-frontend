@@ -99,6 +99,8 @@ export const sendCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/send
 export const pauseCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/pause`, { method: "POST" })
 export const resumeCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/resume`, { method: "POST" })
 export const cancelCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/cancel`, { method: "POST" })
+export const deleteCampaign = (id: string) =>
+  req<{ id: string; deleted: boolean }>(`/campaigns/${id}`, { method: "DELETE" })
 
 // ── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = (id: string) => req<AnalyticsSnapshot>(`/analytics/campaigns/${id}`)
