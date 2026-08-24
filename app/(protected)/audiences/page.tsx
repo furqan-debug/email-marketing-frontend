@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -53,6 +53,11 @@ export default function AudiencesPage() {
   const [dialogError, setDialogError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  // Delete confirmation state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleteConfirmName, setDeleteConfirmName] = useState<string>('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
   async function loadData() {
     setLoading(true)
     setError(null)
@@ -98,19 +103,25 @@ export default function AudiencesPage() {
     }
   }
 
-  async function handleDelete(id: string, e: React.MouseEvent) {
+  function handleDelete(id: string, name: string, e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm('Are you sure you want to delete this audience? This cannot be undone.')) {
-      return
-    }
+    setDeleteConfirmId(id)
+    setDeleteConfirmName(name)
+    setDeleteError(null)
+  }
 
-    setDeletingId(id)
+  async function confirmDelete() {
+    if (!deleteConfirmId) return
+    setDeletingId(deleteConfirmId)
+    setDeleteError(null)
     try {
-      await deleteAudience(id)
+      await deleteAudience(deleteConfirmId)
+      setDeleteConfirmId(null)
+      setDeleteConfirmName('')
       await loadData()
     } catch (err: any) {
-      alert(err.message || 'Failed to delete audience. Ensure no campaigns are attached.')
+      setDeleteError(err.message || 'Failed to delete audience.')
     } finally {
       setDeletingId(null)
     }
@@ -294,7 +305,7 @@ export default function AudiencesPage() {
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
                           disabled={deletingId === aud.id}
-                          onClick={(e) => handleDelete(aud.id, e)}
+                          onClick={(e) => handleDelete(aud.id, aud.name, e)}
                           title="Delete audience"
                         >
                           {deletingId === aud.id ? (
@@ -312,6 +323,51 @@ export default function AudiencesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => {
+        if (!open) { setDeleteConfirmId(null); setDeleteConfirmName(''); setDeleteError(null) }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Audience</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>"{deleteConfirmName}"</strong>?
+              This action cannot be undone and will remove all contacts in this audience.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {deleteError}
+                {deleteError.includes('campaign') && (
+                  <span className="block mt-1">
+                    Go to the <a href="/campaigns" className="underline font-medium">Campaigns page</a> and delete or reassign those campaigns first.
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setDeleteConfirmId(null); setDeleteConfirmName(''); setDeleteError(null) }}
+              disabled={!!deletingId}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={!!deletingId}
+            >
+              {deletingId ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete Audience
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
