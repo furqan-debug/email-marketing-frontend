@@ -12,20 +12,25 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Loader2, 
-  Sparkles,
-  Play,
-  Save,
-  Edit3
+  Sparkles, 
+  Play, 
+  Save, 
+  Edit3,
+  ChevronLeft,
+  ChevronRight,
+  User
 } from 'lucide-react'
 import { 
   getAudiences, 
   getTemplates, 
   getTemplate, 
+  getContacts,
   createCampaign, 
   generateMessages, 
   sendCampaign 
 } from '@/lib/api'
-import type { Audience, Template } from '@/lib/types'
+import type { Audience, Template, Contact } from '@/lib/types'
+import { renderContactPreview } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import EmailComposer from '@/components/EmailComposer'
+
 
 export default function NewCampaignPage() {
   const router = useRouter()
@@ -62,6 +68,11 @@ export default function NewCampaignPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedTemplateHtml, setSelectedTemplateHtml] = useState('')
   const [customHtml, setCustomHtml] = useState('')
+
+  // Audience contacts for live preview
+  const [previewContacts, setPreviewContacts] = useState<Contact[]>([])
+  const [previewContactIndex, setPreviewContactIndex] = useState(0)
+  const [loadingContacts, setLoadingContacts] = useState(false)
 
   // Submit flow
   const [submitting, setSubmitting] = useState(false)
@@ -96,6 +107,28 @@ export default function NewCampaignPage() {
     }
     loadFormOptions()
   }, [])
+
+  // Fetch real contacts whenever audience changes to power live preview
+  useEffect(() => {
+    if (!audienceId) {
+      setPreviewContacts([])
+      setPreviewContactIndex(0)
+      return
+    }
+    setLoadingContacts(true)
+    getContacts(audienceId, 1, 100)
+      .then((res) => {
+        setPreviewContacts(res.data || [])
+        setPreviewContactIndex(0)
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch audience contacts for preview:', err)
+        setPreviewContacts([])
+        setPreviewContactIndex(0)
+      })
+      .finally(() => setLoadingContacts(false))
+  }, [audienceId])
+
 
   async function handleTemplateChange(tplId: string) {
     setSelectedTemplateId(tplId)
@@ -359,47 +392,120 @@ export default function NewCampaignPage() {
                         </Select>
                       </div>
 
-                      {/* Template Preview */}
-                      {selectedTemplateHtml && (
-                        <div className="space-y-2 pt-2 border-t">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                              <Eye className="h-3.5 w-3.5 text-primary" />
-                              Template Live Preview (Sample Recipient: Alex Morgan)
+                      {/* Template Preview with Audience Member Navigator */}
+                      {selectedTemplateHtml && (() => {
+                        const activeContact = previewContacts.length > 0 ? (previewContacts[previewContactIndex] || previewContacts[0]) : null
+                        return (
+                          <div className="space-y-3 pt-3 border-t">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded">
+                                  <Eye className="h-3.5 w-3.5" />
+                                  Template Live Preview
+                                </span>
+                                {previewContacts.length > 0 ? (
+                                  <span className="text-[11px] font-medium text-muted-foreground">
+                                    (Using 1st row & members from selected audience)
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-muted-foreground">
+                                    (Using sample preview data)
+                                  </span>
+                                )}
+                              </div>
+
+                              <Link
+                                href="/templates"
+                                className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
+                              >
+                                <Edit3 className="h-3 w-3" /> Edit in Templates
+                              </Link>
                             </div>
-                            <Link
-                              href="/templates"
-                              className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
-                            >
-                              <Edit3 className="h-3 w-3" /> Edit in Templates
-                            </Link>
+
+                            {/* Recipient Navigator Bar */}
+                            {previewContacts.length > 0 && (
+                              <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/40 border rounded-lg px-3 py-2 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-muted-foreground flex items-center gap-1">
+                                    <User className="h-3.5 w-3.5 text-primary" />
+                                    Member {previewContactIndex + 1} of {previewContacts.length}:
+                                  </span>
+
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      disabled={previewContactIndex <= 0}
+                                      onClick={() => setPreviewContactIndex(Math.max(0, previewContactIndex - 1))}
+                                      title="Previous Audience Member"
+                                    >
+                                      <ChevronLeft className="h-3.5 w-3.5" />
+                                    </Button>
+
+                                    <select
+                                      className="h-7 text-xs bg-background border rounded px-2 py-0 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[260px] truncate"
+                                      value={previewContactIndex}
+                                      onChange={(e) => setPreviewContactIndex(Number(e.target.value))}
+                                    >
+                                      {previewContacts.map((c, i) => (
+                                        <option key={c.id || i} value={i}>
+                                          Row #{i + 1}: {c.firstName || ''} {c.lastName || ''} ({c.email})
+                                        </option>
+                                      ))}
+                                    </select>
+
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      disabled={previewContactIndex >= previewContacts.length - 1}
+                                      onClick={() => setPreviewContactIndex(Math.min(previewContacts.length - 1, previewContactIndex + 1))}
+                                      title="Next Audience Member"
+                                    >
+                                      <ChevronRight className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                  <span>Email:</span>
+                                  <code className="bg-background px-1.5 py-0.5 rounded border text-foreground font-mono">
+                                    {activeContact?.email}
+                                  </code>
+                                  {activeContact?.attributes?.companyName || activeContact?.attributes?.company ? (
+                                    <span className="ml-1 text-primary font-medium">
+                                      • {activeContact.attributes?.companyName || activeContact.attributes?.company}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Rendered Email Body */}
+                            <div className="border rounded-lg bg-white p-6 shadow-xs max-h-[380px] overflow-y-auto">
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html: renderContactPreview(selectedTemplateHtml, activeContact),
+                                }}
+                                className={`email-content-editable ${
+                                  selectedTemplateHtml.includes('line-height: 1.25') || 
+                                  selectedTemplateHtml.includes('line-height: 1.3') || 
+                                  selectedTemplateHtml.includes('margin-bottom: 4px') || 
+                                  selectedTemplateHtml.includes('spacing-compact')
+                                    ? 'spacing-compact'
+                                    : selectedTemplateHtml.includes('line-height: 2') || 
+                                      selectedTemplateHtml.includes('spacing-relaxed')
+                                    ? 'spacing-relaxed'
+                                    : 'spacing-normal'
+                                }`}
+                              />
+                            </div>
                           </div>
-                          <div className="border rounded-lg bg-white p-6 shadow-xs max-h-[360px] overflow-y-auto">
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: selectedTemplateHtml
-                                  .replace(/\{\{\s*first_name\s*\}\}/gi, 'Alex')
-                                  .replace(/\{\{\s*last_name\s*\}\}/gi, 'Morgan')
-                                  .replace(/\{\{\s*company_name\s*\}\}/gi, 'Acme Corp')
-                                  .replace(/\{\{\s*title\s*\}\}/gi, 'Marketing Director')
-                                  .replace(/\{\{\s*email\s*\}\}/gi, 'alex.morgan@example.com')
-                                  .replace(/\{\{\s*unsubscribe\s*\}\}/gi, '#unsubscribe')
-                              }}
-                              className={`email-content-editable ${
-                                selectedTemplateHtml.includes('line-height: 1.25') || 
-                                selectedTemplateHtml.includes('line-height: 1.3') || 
-                                selectedTemplateHtml.includes('margin-bottom: 4px') || 
-                                selectedTemplateHtml.includes('spacing-compact')
-                                  ? 'spacing-compact'
-                                  : selectedTemplateHtml.includes('line-height: 2') || 
-                                    selectedTemplateHtml.includes('spacing-relaxed')
-                                  ? 'spacing-relaxed'
-                                  : 'spacing-normal'
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      )}
+                        )
+                      })()}
 
                     </div>
                   )}
@@ -412,9 +518,13 @@ export default function NewCampaignPage() {
                     onChange={setCustomHtml}
                     placeholder="Type your email broadcast message here..."
                     minHeight="260px"
+                    contacts={previewContacts}
+                    selectedContactIndex={previewContactIndex}
+                    onContactIndexChange={setPreviewContactIndex}
                   />
                 </TabsContent>
               </Tabs>
+
             </CardContent>
 
             <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/20 border-t pt-4">
