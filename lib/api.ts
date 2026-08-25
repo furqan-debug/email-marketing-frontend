@@ -1,8 +1,9 @@
 import type {
   Workspace, Audience, Contact, PaginatedContacts,
   Template, Campaign, AnalyticsSnapshot, ImportResult,
-  ColumnMapping,
+  ColumnMapping, CampaignStep, SequenceStepInput, SequenceProgress,
 } from "./types"
+
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "")
 
@@ -92,7 +93,13 @@ export const createCampaign = (body: {
   replyTo?: string
   htmlBody?: string
   templateId?: string
+  isSequence?: boolean
+  steps?: SequenceStepInput[]
 }) => req<Campaign>("/campaigns", { method: "POST", body: JSON.stringify(body) })
+export const getCampaignSteps = (id: string) => req<CampaignStep[]>(`/campaigns/${id}/steps`)
+export const saveCampaignSteps = (id: string, steps: SequenceStepInput[]) =>
+  req<CampaignStep[]>(`/campaigns/${id}/steps`, { method: "POST", body: JSON.stringify({ steps }) })
+export const getSequenceProgress = (id: string) => req<SequenceProgress>(`/campaigns/${id}/sequence-progress`)
 export const generateMessages = (id: string) =>
   req<{ created: number; suppressed: number; skipped: number }>(`/campaigns/${id}/generate-messages`, { method: "POST" })
 export const sendCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/send`, { method: "POST" })
@@ -101,6 +108,7 @@ export const resumeCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/re
 export const cancelCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/cancel`, { method: "POST" })
 export const deleteCampaign = (id: string) =>
   req<{ id: string; deleted: boolean }>(`/campaigns/${id}`, { method: "DELETE" })
+
 
 // ── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = (id: string) => req<AnalyticsSnapshot>(`/analytics/campaigns/${id}`)

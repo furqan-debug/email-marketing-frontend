@@ -29,7 +29,7 @@ import {
   generateMessages, 
   sendCampaign 
 } from '@/lib/api'
-import type { Audience, Template, Contact } from '@/lib/types'
+import type { Audience, Template, Contact, SequenceStepInput } from '@/lib/types'
 import { renderContactPreview } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import EmailComposer from '@/components/EmailComposer'
-
+import SequenceBuilder from '@/components/SequenceBuilder'
 
 export default function NewCampaignPage() {
   const router = useRouter()
@@ -64,15 +64,34 @@ export default function NewCampaignPage() {
   const [fromEmail, setFromEmail] = useState('')
   const [replyTo, setReplyTo] = useState('')
   const [audienceId, setAudienceId] = useState('')
-  const [contentMode, setContentMode] = useState<'template' | 'custom'>('template')
+  const [contentMode, setContentMode] = useState<'sequence' | 'custom' | 'template'>('sequence')
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedTemplateHtml, setSelectedTemplateHtml] = useState('')
   const [customHtml, setCustomHtml] = useState('')
+
+  // Multi-step follow-up sequence steps
+  const [sequenceSteps, setSequenceSteps] = useState<SequenceStepInput[]>([
+    {
+      stepOrder: 1,
+      delayHours: 0,
+      sendAsReply: false,
+      subject: '',
+      htmlBody: '',
+    },
+    {
+      stepOrder: 2,
+      delayHours: 48,
+      sendAsReply: true,
+      subject: '',
+      htmlBody: '',
+    },
+  ])
 
   // Audience contacts for live preview
   const [previewContacts, setPreviewContacts] = useState<Contact[]>([])
   const [previewContactIndex, setPreviewContactIndex] = useState(0)
   const [loadingContacts, setLoadingContacts] = useState(false)
+
 
   // Submit flow
   const [submitting, setSubmitting] = useState(false)
@@ -153,6 +172,19 @@ export default function NewCampaignPage() {
       return
     }
 
+    if (contentMode === 'sequence') {
+      const step1Subject = sequenceSteps[0]?.subject?.trim() || subject.trim()
+      const step1Html = sequenceSteps[0]?.htmlBody?.trim()
+      if (!step1Subject) {
+        setSubmitError('Please enter a Subject Line for Step 1.')
+        return
+      }
+      if (!step1Html) {
+        setSubmitError('Please enter Email Body content for Step 1.')
+        return
+      }
+    }
+
     if (contentMode === 'template' && !selectedTemplateId) {
       setSubmitError('Please select an email template or switch to custom HTML.')
       return
@@ -168,22 +200,30 @@ export default function NewCampaignPage() {
 
     try {
       // 1. Create Campaign
-      setCurrentStep('1/3: Creating campaign...')
+      setCurrentStep('1/3: Creating campaign & sequence steps...')
       const campaignPayload = {
         name: name.trim(),
         audienceId,
-        subject: subject.trim() || undefined,
+        subject: (contentMode === 'sequence' ? (sequenceSteps[0]?.subject || subject) : subject).trim() || undefined,
         fromName: fromName.trim() || undefined,
         fromEmail: fromEmail.trim() || undefined,
         replyTo: replyTo.trim() || undefined,
         templateId: contentMode === 'template' ? selectedTemplateId : undefined,
-        htmlBody: contentMode === 'custom' ? customHtml : undefined,
+        htmlBody: contentMode === 'custom' ? customHtml : (contentMode === 'sequence' ? sequenceSteps[0]?.htmlBody : undefined),
+        isSequence: contentMode === 'sequence',
+        steps: contentMode === 'sequence' ? sequenceSteps.map((s, idx) => ({
+          ...s,
+          stepOrder: idx + 1,
+          subject: idx === 0 ? (s.subject || subject).trim() : s.subject?.trim(),
+        })) : undefined,
       }
       const campaign = await createCampaign(campaignPayload)
 
-      // 2. Generate Messages
-      setCurrentStep('2/3: Generating message queue & filtering suppressions...')
-      await generateMessages(campaign.id)
+      // 2. Generate Messages (only needed for single-shot campaigns, sequence handles leads dynamically)
+      if (contentMode !== 'sequence') {
+        setCurrentStep('2/3: Generating message queue & filtering suppressions...')
+        await generateMessages(campaign.id)
+      }
 
       // 3. Send if requested
       if (shouldSendImmediately) {
@@ -198,6 +238,7 @@ export default function NewCampaignPage() {
       setSubmitting(false)
     }
   }
+
 
   if (loading) {
     return (
@@ -340,30 +381,48 @@ export default function NewCampaignPage() {
             </CardContent>
           </Card>
 
-          {/* Card 2: Email Content */}
+          {/* Card 2: Email Content & Design */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-base">2. Email Content & Design</CardTitle>
+              <CardTitle className="text-base">2. Email Content & Outreach Sequence</CardTitle>
               <CardDescription>
-                Choose an existing HTML template or provide custom HTML markup
+                Build an automated multi-step follow-up sequence, or choose single email broadcast
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Tabs 
                 value={contentMode} 
-                onValueChange={(val) => setContentMode(val as 'template' | 'custom')}
+                onValueChange={(val) => setContentMode(val as 'sequence' | 'custom' | 'template')}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="template" className="flex items-center gap-2">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-4 h-auto p-1 gap-1">
+                  <TabsTrigger value="sequence" className="flex items-center gap-1.5 py-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Multi-Step Sequence (Follow-ups)
+                  </TabsTrigger>
+                  <TabsTrigger value="custom" className="flex items-center gap-1.5 py-2">
+                    <Edit3 className="h-4 w-4" />
+                    Single Email (Custom Body)
+                  </TabsTrigger>
+                  <TabsTrigger value="template" className="flex items-center gap-1.5 py-2">
                     <FileCode2 className="h-4 w-4" />
                     Use Saved Template
                   </TabsTrigger>
-                  <TabsTrigger value="custom" className="flex items-center gap-2">
-                    <Edit3 className="h-4 w-4" />
-                    Compose Email / Custom Body
-                  </TabsTrigger>
                 </TabsList>
+
+                {/* Mode 1: Automated Multi-Step Sequence */}
+                <TabsContent value="sequence" className="space-y-4">
+                  <SequenceBuilder
+                    steps={sequenceSteps}
+                    onChange={setSequenceSteps}
+                    initialSubject={subject}
+                    onInitialSubjectChange={setSubject}
+                    contacts={previewContacts}
+                    selectedContactIndex={previewContactIndex}
+                    onContactIndexChange={setPreviewContactIndex}
+                  />
+                </TabsContent>
+
 
                 {/* Mode 1: Template Selection */}
                 <TabsContent value="template" className="space-y-4">

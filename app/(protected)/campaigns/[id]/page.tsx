@@ -29,9 +29,10 @@ import {
   pauseCampaign, 
   resumeCampaign, 
   cancelCampaign, 
-  generateMessages 
+  generateMessages,
+  getSequenceProgress 
 } from '@/lib/api'
-import type { Campaign, AnalyticsSnapshot } from '@/lib/types'
+import type { Campaign, AnalyticsSnapshot, SequenceProgress } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,21 +45,26 @@ export default function CampaignDetailPage() {
 
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [analytics, setAnalytics] = useState<AnalyticsSnapshot | null>(null)
+  const [sequenceProgress, setSequenceProgress] = useState<SequenceProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+
   const loadData = useCallback(async () => {
     try {
-      const [cRes, aRes] = await Promise.allSettled([
+      const [cRes, aRes, sRes] = await Promise.allSettled([
         getCampaign(id),
         getAnalytics(id),
+        getSequenceProgress(id),
       ])
       let cData = cRes.status === 'fulfilled' ? cRes.value : null
       let aData = aRes.status === 'fulfilled' ? aRes.value : null
+      let sData = sRes.status === 'fulfilled' ? sRes.value : null
 
       if (cData) setCampaign(cData)
       if (aData) setAnalytics(aData)
+      if (sData) setSequenceProgress(sData)
 
       // Auto-compute fresh analytics if snapshot is missing, stale, or has 0 sent while completed
       if (
@@ -76,6 +82,7 @@ export default function CampaignDetailPage() {
       setLoading(false)
     }
   }, [id])
+
 
   useEffect(() => {
     loadData()
@@ -323,6 +330,126 @@ export default function CampaignDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Sequence Progression Breakdown */}
+      {sequenceProgress && sequenceProgress.steps.length > 0 && (
+        <Card className="border-primary/30 shadow-xs">
+          <CardHeader className="bg-primary/5 pb-3 border-b">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base">Outreach Sequence Pipeline</CardTitle>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <Badge variant="outline" className="bg-background">
+                  Total Leads: {sequenceProgress.totalLeads}
+                </Badge>
+                <Badge variant="default" className="bg-blue-600">
+                  Waiting Next Step: {sequenceProgress.statusCounts.WAITING_DELAY}
+                </Badge>
+                <Badge variant="default" className="bg-green-600">
+                  Completed: {sequenceProgress.statusCounts.COMPLETED}
+                </Badge>
+                {sequenceProgress.statusCounts.UNSUBSCRIBED > 0 && (
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                    Unsubscribed: {sequenceProgress.statusCounts.UNSUBSCRIBED}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <CardDescription className="text-xs">
+              Automated multi-step schedule: Follow-ups send automatically if prospect does not reply or unsubscribe.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 space-y-5">
+            {/* Step Pipeline Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {sequenceProgress.steps.map((s, idx) => (
+                <div key={s.stepOrder} className="border rounded-lg p-3.5 bg-card/60 relative space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px]">
+                        {s.stepOrder}
+                      </span>
+                      {idx === 0 ? 'Initial Email' : `Follow-up #${idx}`}
+                    </span>
+                    {s.sendAsReply ? (
+                      <span className="text-[10px] font-medium bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                        Re: Threaded
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-medium bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                        New Thread
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {idx === 0 ? (campaign.subject || 'Pitch') : (s.sendAsReply ? `Re: ${campaign.subject || 'Original'}` : (s.subject || 'Follow-up'))}
+                  </p>
+                  <div className="text-[11px] font-medium pt-1 border-t flex items-center justify-between text-muted-foreground">
+                    <span>{idx === 0 ? 'Day 0 (Launch)' : `+${Math.round(s.delayHours / 24)}d (${s.delayHours}h)`}</span>
+                    <span className="text-foreground font-semibold">
+                      {s.sentAtStep} Sent / {s.activeAtStep} Active
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Recent Leads Progress Table */}
+            {sequenceProgress.leads.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">
+                  Active Prospects in Sequence (Top {sequenceProgress.leads.length})
+                </h4>
+                <div className="border rounded-lg overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-muted/50 text-muted-foreground border-b">
+                      <tr>
+                        <th className="py-2 px-3 font-semibold">Recipient</th>
+                        <th className="py-2 px-3 font-semibold">Current Step</th>
+                        <th className="py-2 px-3 font-semibold">Status</th>
+                        <th className="py-2 px-3 font-semibold">Last Sent</th>
+                        <th className="py-2 px-3 font-semibold">Next Follow-up</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {sequenceProgress.leads.map((lead) => (
+                        <tr key={lead.id} className="hover:bg-muted/20">
+                          <td className="py-2 px-3 font-medium text-foreground">
+                            {lead.name !== '—' ? `${lead.name} (${lead.email})` : lead.email}
+                          </td>
+                          <td className="py-2 px-3">
+                            <span className="font-semibold text-primary">
+                              Step {lead.currentStep} of {sequenceProgress.steps.length}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              lead.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                              lead.status === 'WAITING_DELAY' ? 'bg-blue-100 text-blue-800' :
+                              lead.status === 'UNSUBSCRIBED' ? 'bg-orange-100 text-orange-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {lead.status}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-muted-foreground">
+                            {lead.lastSentAt ? new Date(lead.lastSentAt).toLocaleString() : '—'}
+                          </td>
+                          <td className="py-2 px-3 text-muted-foreground font-mono text-[11px]">
+                            {lead.nextSendAt ? new Date(lead.nextSendAt).toLocaleString() : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stale warning banner */}
       {analytics?.staleWarning && (
         <Alert variant="warning">
@@ -336,6 +463,7 @@ export default function CampaignDetailPage() {
 
       {/* Analytics Snapshot Grid */}
       <div>
+
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Engagement & Delivery Analytics</h2>
           {analytics?.computedAt && new Date(analytics.computedAt).getFullYear() > 2020 && (
