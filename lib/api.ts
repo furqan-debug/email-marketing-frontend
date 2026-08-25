@@ -2,7 +2,9 @@ import type {
   Workspace, Audience, Contact, PaginatedContacts,
   Template, Campaign, AnalyticsSnapshot, ImportResult,
   ColumnMapping, CampaignStep, SequenceStepInput, SequenceProgress,
+  ActivityEvent,
 } from "./types"
+
 
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "")
@@ -117,4 +119,7 @@ export const markLeadReplied = (campaignId: string, leadId: string) =>
 export const getAnalytics = (id: string) => req<AnalyticsSnapshot>(`/analytics/campaigns/${id}`)
 export const computeAnalytics = (id: string) =>
   req<AnalyticsSnapshot>(`/analytics/campaigns/${id}/compute`, { method: "POST" })
+export const getCampaignActivity = (id: string) =>
+  req<ActivityEvent[]>(`/analytics/campaigns/${id}/activity`)
+
 

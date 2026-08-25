@@ -86,6 +86,9 @@ export interface SequenceProgress {
     subject?: string | null
     activeAtStep: number
     sentAtStep: number
+    opensAtStep?: number
+    clicksAtStep?: number
+    repliesAtStep?: number
   }>
   statusCounts: {
     ACTIVE: number
@@ -118,12 +121,13 @@ export interface Campaign {
   _count?: { leads?: number; messages?: number }
 }
 
-
 export interface AnalyticsRates {
   deliveryRate: number
   openRate: number
   clickRate: number
+  ctor: number
   replyRate: number
+  unsubRate: number
   bounceRate: number
   complaintRate: number
 }
@@ -137,6 +141,7 @@ export interface AnalyticsSnapshot {
   totalOpens: number
   totalClicks: number
   replied: number
+  unsubscribed: number
   bounced: number
   complained: number
   rates: AnalyticsRates
@@ -144,6 +149,17 @@ export interface AnalyticsSnapshot {
   staleWarning: boolean
 }
 
+export interface ActivityEvent {
+  id: string
+  type: string
+  messageId: string
+  stepNumber: number
+  contactId: string
+  contactEmail: string
+  contactName?: string | null
+  occurredAt: string
+  country?: string | null
+}
 
 export interface ImportResult {
   imported: number
@@ -151,3 +167,4 @@ export interface ImportResult {
   errors: number
   errorDetails: string[]
 }
+
