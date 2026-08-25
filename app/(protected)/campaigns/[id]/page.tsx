@@ -19,7 +19,8 @@ import {
   ShieldAlert, 
   AlertTriangle,
   Loader2,
-  Sparkles
+  Sparkles,
+  MessageSquareReply
 } from 'lucide-react'
 import { 
   getCampaign, 
@@ -30,8 +31,10 @@ import {
   resumeCampaign, 
   cancelCampaign, 
   generateMessages,
-  getSequenceProgress 
+  getSequenceProgress,
+  markLeadReplied
 } from '@/lib/api'
+
 import type { Campaign, AnalyticsSnapshot, SequenceProgress } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -136,6 +139,20 @@ export default function CampaignDetailPage() {
     }
   }
 
+  async function handleMarkReplied(leadId: string) {
+    setActionLoading(true)
+    try {
+      await markLeadReplied(id, leadId)
+      setActionMessage({ type: 'success', text: 'Lead marked as replied — further sequence follow-ups halted.' })
+      await loadData()
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.message || 'Failed to mark lead as replied' })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -181,6 +198,7 @@ export default function CampaignDetailPage() {
   const delivered = analytics?.delivered || 0
   const opened = analytics?.opened || 0
   const clicked = analytics?.clicked || 0
+  const replied = analytics?.replied || 0
   const bounced = analytics?.bounced || 0
   const complained = analytics?.complained || 0
   const totalOpens = analytics?.totalOpens || 0
@@ -189,7 +207,9 @@ export default function CampaignDetailPage() {
   const deliveryRate = sent > 0 ? (delivered / sent) : 0
   const openRate = sent > 0 ? (opened / sent) : 0
   const clickRate = sent > 0 ? (clicked / sent) : 0
+  const replyRate = sent > 0 ? (replied / sent) : 0
   const bounceRate = sent > 0 ? (bounced / sent) : 0
+
 
   return (
     <div className="space-y-8">
@@ -346,6 +366,11 @@ export default function CampaignDetailPage() {
                 <Badge variant="default" className="bg-blue-600">
                   Waiting Next Step: {sequenceProgress.statusCounts.WAITING_DELAY}
                 </Badge>
+                {sequenceProgress.statusCounts.REPLIED > 0 && (
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 font-bold">
+                    Replied: {sequenceProgress.statusCounts.REPLIED}
+                  </Badge>
+                )}
                 <Badge variant="default" className="bg-green-600">
                   Completed: {sequenceProgress.statusCounts.COMPLETED}
                 </Badge>
@@ -410,6 +435,7 @@ export default function CampaignDetailPage() {
                         <th className="py-2 px-3 font-semibold">Status</th>
                         <th className="py-2 px-3 font-semibold">Last Sent</th>
                         <th className="py-2 px-3 font-semibold">Next Follow-up</th>
+                        <th className="py-2 px-3 font-semibold text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -425,6 +451,7 @@ export default function CampaignDetailPage() {
                           </td>
                           <td className="py-2 px-3">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              lead.status === 'REPLIED' ? 'bg-purple-100 text-purple-800' :
                               lead.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
                               lead.status === 'WAITING_DELAY' ? 'bg-blue-100 text-blue-800' :
                               lead.status === 'UNSUBSCRIBED' ? 'bg-orange-100 text-orange-800' :
@@ -438,6 +465,26 @@ export default function CampaignDetailPage() {
                           </td>
                           <td className="py-2 px-3 text-muted-foreground font-mono text-[11px]">
                             {lead.nextSendAt ? new Date(lead.nextSendAt).toLocaleString() : '—'}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            {lead.status !== 'REPLIED' && lead.status !== 'UNSUBSCRIBED' && lead.status !== 'BOUNCED' ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={actionLoading}
+                                onClick={() => handleMarkReplied(lead.id)}
+                                className="h-6 text-[10px] px-2 text-purple-700 hover:text-purple-800 hover:bg-purple-50"
+                                title="Mark as replied to stop future follow-ups"
+                              >
+                                <MessageSquareReply className="h-3 w-3 mr-1" />
+                                Mark Replied
+                              </Button>
+                            ) : lead.status === 'REPLIED' ? (
+                              <span className="text-[10px] text-purple-700 font-semibold flex items-center justify-end gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Replied
+                              </span>
+                            ) : null}
                           </td>
                         </tr>
                       ))}
@@ -534,10 +581,31 @@ export default function CampaignDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Replies Received */}
+          <Card className="border-purple-500/20 bg-purple-500/5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-200">
+                Replies &amp; Reply Rate
+              </CardTitle>
+              <MessageSquareReply className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-extrabold text-purple-700 dark:text-purple-300">
+                {replied.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                <span className="font-semibold text-purple-700 dark:text-purple-300">
+                  {formatRate(replyRate)} reply rate
+                </span>{' '}
+                &middot; Stop-on-reply active
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Bounced */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Bounces</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Bounces &amp; Complaints</CardTitle>
               <ShieldAlert className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
@@ -545,23 +613,7 @@ export default function CampaignDetailPage() {
                 {bounced.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1 font-semibold">
-                {formatRate(bounceRate)} bounce rate
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Complained */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Spam Complaints</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-destructive">
-                {complained.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Automatically added to suppression list
+                {formatRate(bounceRate)} bounce rate &middot; {complained} complaints
               </p>
             </CardContent>
           </Card>

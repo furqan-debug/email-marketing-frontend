@@ -123,6 +123,7 @@ export interface AnalyticsRates {
   deliveryRate: number
   openRate: number
   clickRate: number
+  replyRate: number
   bounceRate: number
   complaintRate: number
 }
@@ -135,12 +136,14 @@ export interface AnalyticsSnapshot {
   clicked: number
   totalOpens: number
   totalClicks: number
+  replied: number
   bounced: number
   complained: number
   rates: AnalyticsRates
   computedAt: string
   staleWarning: boolean
 }
+
 
 export interface ImportResult {
   imported: number

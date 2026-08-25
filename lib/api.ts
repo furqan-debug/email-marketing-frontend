@@ -110,7 +110,11 @@ export const deleteCampaign = (id: string) =>
   req<{ id: string; deleted: boolean }>(`/campaigns/${id}`, { method: "DELETE" })
 
 
+export const markLeadReplied = (campaignId: string, leadId: string) =>
+  req<any>(`/campaigns/${campaignId}/leads/${leadId}/reply`, { method: "POST" })
+
 // ── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = (id: string) => req<AnalyticsSnapshot>(`/analytics/campaigns/${id}`)
 export const computeAnalytics = (id: string) =>
   req<AnalyticsSnapshot>(`/analytics/campaigns/${id}/compute`, { method: "POST" })
+
