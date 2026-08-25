@@ -46,6 +46,8 @@ export interface CampaignStep {
   campaignId: string
   stepOrder: number
   delayHours: number
+  scheduledAt?: string | null
+  sendAtTime?: string | null
   sendAsReply: boolean
   subject?: string | null
   htmlBody: string
@@ -56,11 +58,14 @@ export interface CampaignStep {
 export interface SequenceStepInput {
   stepOrder: number
   delayHours: number
+  scheduledAt?: string | null
+  sendAtTime?: string | null
   sendAsReply: boolean
   subject?: string
   htmlBody: string
   templateId?: string
 }
+
 
 export interface SequenceLead {
   id: string

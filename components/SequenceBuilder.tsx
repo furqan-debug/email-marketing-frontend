@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Plus,
   Trash2,
@@ -11,7 +11,9 @@ import {
   ArrowDown,
   Calendar,
   Layers,
-  CheckCircle2
+  CheckCircle2,
+  CalendarDays,
+  Timer
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,11 +45,23 @@ export default function SequenceBuilder({
     {
       stepOrder: 1,
       delayHours: 0,
+      scheduledAt: null,
+      sendAtTime: null,
       sendAsReply: false,
       subject: initialSubject || '',
       htmlBody: '',
     }
   ]
+
+  // Track which connector has its expanded scheduling drawer open (default open for easy editing)
+  const [expandedConnectors, setExpandedConnectors] = useState<Record<number, boolean>>({})
+
+  const toggleConnector = (idx: number) => {
+    setExpandedConnectors((prev) => ({
+      ...prev,
+      [idx]: prev[idx] === undefined ? false : !prev[idx],
+    }))
+  }
 
   const updateStep = (index: number, partial: Partial<SequenceStepInput>) => {
     const updated = [...sequenceSteps]
@@ -64,6 +78,8 @@ export default function SequenceBuilder({
     const newStep: SequenceStepInput = {
       stepOrder: nextOrder,
       delayHours: 48, // Default 2 days (48 hours)
+      scheduledAt: null,
+      sendAtTime: '09:00',
       sendAsReply: true,
       subject: '',
       htmlBody: '',
@@ -101,11 +117,11 @@ export default function SequenceBuilder({
                   Automated Multi-Step Outreach Sequence
                 </h4>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-primary/10 text-primary rounded-full border border-primary/20">
-                  Automated Follow-ups
+                  Custom Date &amp; Time Scheduling
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Send initial email and schedule intelligent follow-up steps with automatic reply detection.
+                Configure custom date, time of day, and flexible day/hour intervals with automatic reply detection.
               </p>
             </div>
           </div>
@@ -131,34 +147,175 @@ export default function SequenceBuilder({
         {sequenceSteps.map((step, idx) => {
           const isStep1 = idx === 0
           const delayDays = Math.round((step.delayHours || 0) / 24)
+          const isExactDateMode = !!step.scheduledAt
+          const isConnectorOpen = expandedConnectors[idx] !== false // default open
 
           return (
             <div key={idx} className="space-y-4">
-              {/* Connector / Delay between steps */}
+              {/* Connector / Flexible Date & Time Delay between steps */}
               {!isStep1 && (
-                <div className="flex flex-col items-center justify-center my-1">
-                  <div className="w-0.5 h-5 bg-primary/30 dashed" />
-                  <div className="flex items-center gap-2.5 bg-background border-2 border-primary/30 rounded-full px-4 py-1.5 shadow-sm my-1 text-xs transition-all hover:border-primary">
-                    <Clock className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span className="font-semibold text-foreground">Wait delay:</span>
-                    <select
-                      className="h-6 text-xs bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-md px-2 font-bold text-primary outline-none cursor-pointer"
-                      value={step.delayHours}
-                      onChange={(e) => updateStep(idx, { delayHours: Number(e.target.value) })}
-                    >
-                      <option value={24}>1 Day (24 Hours)</option>
-                      <option value={48}>2 Days (48 Hours)</option>
-                      <option value={72}>3 Days (72 Hours)</option>
-                      <option value={96}>4 Days (96 Hours)</option>
-                      <option value={120}>5 Days (120 Hours)</option>
-                      <option value={168}>7 Days (1 Week)</option>
-                      <option value={240}>10 Days</option>
-                      <option value={336}>14 Days (2 Weeks)</option>
-                    </select>
-                    <span className="text-muted-foreground text-[11px]">after Step {idx} (if no reply)</span>
+                <div className="flex flex-col items-center justify-center my-2">
+                  <div className="w-0.5 h-4 bg-primary/30" />
+                  
+                  {/* Scheduling Card */}
+                  <div className="w-full max-w-xl bg-card border-2 border-primary/20 rounded-2xl p-4 shadow-sm space-y-3 transition-all hover:border-primary/40">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-bold text-foreground">
+                          Schedule Follow-up #{idx} (Step {idx + 1})
+                        </span>
+                      </div>
+                      
+                      {/* Mode Toggle: Relative Delay vs Exact Date/Time */}
+                      <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => updateStep(idx, { scheduledAt: null })}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1 ${
+                            !isExactDateMode
+                              ? 'bg-background text-primary shadow-xs'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <Timer className="h-3 w-3" />
+                          Relative Delay
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const defaultDate = new Date(Date.now() + (idx * 2) * 86400000)
+                            defaultDate.setHours(9, 0, 0, 0)
+                            const iso = defaultDate.toISOString().slice(0, 16)
+                            updateStep(idx, { scheduledAt: iso })
+                          }}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1 ${
+                            isExactDateMode
+                              ? 'bg-background text-primary shadow-xs'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <CalendarDays className="h-3 w-3" />
+                          Exact Date &amp; Time
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mode 1: Relative Delay with custom Days/Hours & Preferred Time of Day */}
+                    {!isExactDateMode ? (
+                      <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                          {/* Delay Number & Unit */}
+                          <div className="space-y-1">
+                            <Label className="text-[11px] font-semibold text-muted-foreground">
+                              Wait Interval after Step {idx}:
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min="1"
+                                max="365"
+                                value={
+                                  step.delayHours % 24 === 0 && step.delayHours > 0
+                                    ? step.delayHours / 24
+                                    : step.delayHours
+                                }
+                                onChange={(e) => {
+                                  const val = Math.max(1, Number(e.target.value) || 1)
+                                  // Determine current unit
+                                  const isDays = step.delayHours % 24 === 0
+                                  updateStep(idx, { delayHours: isDays ? val * 24 : val })
+                                }}
+                                className="h-8 text-xs font-bold w-20"
+                              />
+                              <select
+                                className="h-8 text-xs bg-background border rounded-lg px-2.5 font-semibold text-foreground outline-none cursor-pointer flex-1"
+                                value={step.delayHours % 24 === 0 && step.delayHours > 0 ? 'days' : 'hours'}
+                                onChange={(e) => {
+                                  const isDays = e.target.value === 'days'
+                                  const currentNum = step.delayHours % 24 === 0 && step.delayHours > 0 
+                                    ? step.delayHours / 24 
+                                    : Math.max(1, Math.round(step.delayHours / 24) || 1)
+                                  updateStep(idx, { delayHours: isDays ? currentNum * 24 : currentNum })
+                                }}
+                              >
+                                <option value="days">Days</option>
+                                <option value="hours">Hours</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Preferred Delivery Time of Day */}
+                          <div className="space-y-1">
+                            <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                              Preferred Delivery Time:
+                            </Label>
+                            <Input
+                              type="time"
+                              value={step.sendAtTime || '09:00'}
+                              onChange={(e) => updateStep(idx, { sendAtTime: e.target.value })}
+                              className="h-8 text-xs font-medium"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <span className="text-[10px] text-muted-foreground font-semibold mr-1">Quick Presets:</span>
+                          {[
+                            { label: '1 Day', hours: 24 },
+                            { label: '2 Days', hours: 48 },
+                            { label: '3 Days', hours: 72 },
+                            { label: '5 Days', hours: 120 },
+                            { label: '1 Week (7d)', hours: 168 },
+                            { label: '2 Weeks (14d)', hours: 336 },
+                          ].map((preset) => (
+                            <button
+                              key={preset.hours}
+                              type="button"
+                              onClick={() => updateStep(idx, { delayHours: preset.hours })}
+                              className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-all ${
+                                step.delayHours === preset.hours
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Mode 2: Exact Calendar Date & Time */
+                      <div className="space-y-2 pt-1">
+                        <Label className="text-[11px] font-semibold text-muted-foreground">
+                          Select Specific Date &amp; Time for Step {idx + 1}:
+                        </Label>
+                        <Input
+                          type="datetime-local"
+                          value={step.scheduledAt ? step.scheduledAt.slice(0, 16) : ''}
+                          onChange={(e) => updateStep(idx, { scheduledAt: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          className="h-9 text-xs font-medium"
+                        />
+                        {step.scheduledAt && (
+                          <p className="text-[11px] text-primary font-medium flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Scheduled for: {new Date(step.scheduledAt).toLocaleString(undefined, {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="w-0.5 h-5 bg-primary/30" />
-                  <ArrowDown className="h-4 w-4 text-primary -mt-1.5" />
+
+                  <div className="w-0.5 h-4 bg-primary/30" />
+                  <ArrowDown className="h-4 w-4 text-primary -mt-1" />
                 </div>
               )}
 
@@ -181,16 +338,24 @@ export default function SequenceBuilder({
                           <span className="text-[10px] font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
                             Sent at Launch
                           </span>
+                        ) : step.scheduledAt ? (
+                          <span className="text-[10px] font-semibold bg-purple-500/10 text-purple-700 px-2 py-0.5 rounded-full border border-purple-500/20">
+                            Exact Date: {new Date(step.scheduledAt).toLocaleDateString()} {new Date(step.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         ) : (
                           <span className="text-[10px] font-semibold bg-blue-500/10 text-blue-700 px-2 py-0.5 rounded-full border border-blue-500/20">
-                            Scheduled +{delayDays}d
+                            Delay: {step.delayHours >= 24 ? `${step.delayHours / 24}d` : `${step.delayHours}h`} {step.sendAtTime ? `@ ${step.sendAtTime}` : ''}
                           </span>
                         )}
                       </h4>
                       <p className="text-[11px] text-muted-foreground">
                         {isStep1 
                           ? 'Opening pitch sent to all recipients when campaign is launched' 
-                          : `Automatically dispatched ${delayDays} day(s) later if prospect has not replied`}
+                          : `Automatically dispatched ${
+                              step.scheduledAt 
+                                ? `on ${new Date(step.scheduledAt).toLocaleString()}` 
+                                : `${step.delayHours >= 24 ? `${step.delayHours / 24} day(s)` : `${step.delayHours} hour(s)`} later`
+                            } if prospect has not replied`}
                       </p>
                     </div>
                   </div>
