@@ -1,20 +1,19 @@
 'use client'
 
 import React, { useState } from 'react'
+
 import {
   Plus,
   Trash2,
   Clock,
   MessageSquare,
   Mail,
-  Sparkles,
   ArrowDown,
   Calendar,
-  Layers,
-  CheckCircle2,
   CalendarDays,
   Timer
 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -104,46 +103,9 @@ export default function SequenceBuilder({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner Summary */}
-      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-muted/40 border border-primary/20 rounded-xl p-4 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/15 rounded-xl text-primary flex items-center justify-center">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-bold text-sm text-foreground">
-                  Automated Multi-Step Outreach Sequence
-                </h4>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-primary/10 text-primary rounded-full border border-primary/20">
-                  Custom Date &amp; Time Scheduling
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Configure custom date, time of day, and flexible day/hour intervals with automatic reply detection.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className="bg-background/80 border px-3 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 text-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              {sequenceSteps.length} {sequenceSteps.length === 1 ? 'Step' : 'Steps'}
-            </span>
-            <span className="bg-background/80 border px-3 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 text-foreground">
-              <Calendar className="h-3.5 w-3.5 text-primary" />
-              ~{totalDays} Days Total
-            </span>
-            <span className="bg-green-500/10 border border-green-500/20 text-green-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-[11px]">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Stop on reply: Active
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Step Sequence Ladder */}
       <div className="space-y-4">
+
         {sequenceSteps.map((step, idx) => {
           const isStep1 = idx === 0
           const delayDays = Math.round((step.delayHours || 0) / 24)
