@@ -252,38 +252,63 @@ export default function NewCampaignPage() {
   const activeHtmlPreview = contentMode === 'template' ? selectedTemplateHtml : customHtml
 
   return (
-    <div className="space-y-8 max-w-4xl pb-12">
-      {/* Top Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" className="h-9 w-9" asChild>
-          <Link href="/campaigns">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Create New Campaign</h1>
-          <p className="text-muted-foreground text-xs mt-0.5">
-            Configure broadcast metadata, recipient list, sender details, and email content
-          </p>
+    <div className="space-y-8 max-w-5xl pb-16">
+      {/* Top Header & Breadcrumb */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl shadow-xs" asChild>
+            <Link href="/campaigns">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Create Campaign</h1>
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                New
+              </span>
+            </div>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Set up your sender details, select target audience, and build automated outreach sequences.
+            </p>
+          </div>
+        </div>
+
+        {/* Stepper Progress Indicator */}
+        <div className="hidden md:flex items-center gap-2 text-xs font-medium text-muted-foreground bg-muted/40 border px-3.5 py-1.5 rounded-xl shadow-xs">
+          <span className="flex items-center gap-1.5 text-primary font-bold">
+            <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">1</span>
+            Setup &amp; Audience
+          </span>
+          <span className="text-border font-bold">──</span>
+          <span className="flex items-center gap-1.5 text-primary font-bold">
+            <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px]">2</span>
+            Email Sequence
+          </span>
+          <span className="text-border font-bold">──</span>
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="h-5 w-5 rounded-full bg-muted border flex items-center justify-center text-[10px]">3</span>
+            Dispatch
+          </span>
         </div>
       </div>
 
       {initError && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="rounded-xl">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{initError}</AlertDescription>
         </Alert>
       )}
 
       {submitError && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="rounded-xl">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{submitError}</AlertDescription>
         </Alert>
       )}
 
       {audiences.length === 0 ? (
-        <Card className="border-dashed py-12 text-center">
+        <Card className="border-dashed py-12 text-center rounded-2xl">
           <CardContent className="space-y-3">
             <Users className="mx-auto h-10 w-10 text-muted-foreground/50" />
             <h3 className="font-semibold text-base">No Audiences Available</h3>
@@ -296,77 +321,60 @@ export default function NewCampaignPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Card 1: Setup & Target */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base">1. Campaign Details &amp; Sender Configuration</CardTitle>
-              <CardDescription>
-                Define the broadcast name, subject line, custom sender email, and recipient list
-              </CardDescription>
+          <Card className="rounded-2xl border shadow-xs overflow-hidden">
+            <CardHeader className="bg-muted/30 pb-4 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                    1
+                  </span>
+                  <div>
+                    <CardTitle className="text-base font-bold">Campaign &amp; Sender Configuration</CardTitle>
+                    <CardDescription className="text-xs">
+                      Define the internal name, target audience, and verified sender credentials
+                    </CardDescription>
+                  </div>
+                </div>
+                {audienceId && (
+                  <div className="hidden sm:flex items-center gap-1.5 text-xs bg-background border px-3 py-1 rounded-lg font-medium shadow-xs">
+                    <Users className="h-3.5 w-3.5 text-primary" />
+                    <span>
+                      {audiences.find((a) => a.id === audienceId)?.name || 'Audience'}:{' '}
+                      <strong className="text-foreground">
+                        {audiences.find((a) => a.id === audienceId)?._count?.contacts ?? 0} Contacts
+                      </strong>
+                    </span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <CardContent className="p-6 space-y-6">
+              {/* Row 1: Campaign Name & Audience */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
-                  <Label htmlFor="cName">Campaign Name *</Label>
+                  <Label htmlFor="cName" className="text-xs font-bold text-foreground">
+                    Campaign Name *
+                  </Label>
                   <Input
                     id="cName"
-                    placeholder="e.g. August Feature Announcement"
+                    placeholder="e.g. Q3 Sales Outreach or Product Launch"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    className="h-10"
                   />
+                  <p className="text-[11px] text-muted-foreground">Internal name for reporting and analytics.</p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cSubject">Email Subject Line</Label>
-                  <Input
-                    id="cSubject"
-                    placeholder="e.g. Exciting product updates for {{first_name}}!"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="cFromName">From Name (Display Sender)</Label>
-                  <Input
-                    id="cFromName"
-                    placeholder="e.g. Digireps Team"
-                    value={fromName}
-                    onChange={(e) => setFromName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cFromEmail">From Email (Sender Address)</Label>
-                  <Input
-                    id="cFromEmail"
-                    placeholder="e.g. support@digireps.org or team@digireps.org"
-                    value={fromEmail}
-                    onChange={(e) => setFromEmail(e.target.value)}
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Leave blank to use default verified address.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="cReplyTo">Reply-To Email (Optional)</Label>
-                  <Input
-                    id="cReplyTo"
-                    placeholder="e.g. support@digireps.org (where recipient replies go)"
-                    value={replyTo}
-                    onChange={(e) => setReplyTo(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cAudience">Target Audience *</Label>
+                  <Label htmlFor="cAudience" className="text-xs font-bold text-foreground">
+                    Target Audience *
+                  </Label>
                   <Select value={audienceId} onValueChange={setAudienceId}>
-                    <SelectTrigger id="cAudience">
-                      <SelectValue placeholder="Select target audience" />
+                    <SelectTrigger id="cAudience" className="h-10">
+                      <SelectValue placeholder="Select target audience..." />
                     </SelectTrigger>
                     <SelectContent>
                       {audiences.map((a) => (
@@ -376,35 +384,100 @@ export default function NewCampaignPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-[11px] text-muted-foreground">Recipients who will receive this email broadcast.</p>
+                </div>
+              </div>
+
+              {/* Row 2: Sender Details (From Name, From Email, Reply-To) */}
+              <div className="pt-4 border-t space-y-4">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    Sender Credentials (Amazon SES)
+                  </h4>
+                  <span className="text-[10px] text-green-700 font-semibold bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
+                    Verified Domain: digireps.org
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cFromName" className="text-xs font-semibold text-foreground">
+                      Sender Name (From Name)
+                    </Label>
+                    <Input
+                      id="cFromName"
+                      placeholder="e.g. Digireps Team"
+                      value={fromName}
+                      onChange={(e) => setFromName(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cFromEmail" className="text-xs font-semibold text-foreground">
+                      Sender Email (From Address)
+                    </Label>
+                    <Input
+                      id="cFromEmail"
+                      placeholder="e.g. support@digireps.org"
+                      value={fromEmail}
+                      onChange={(e) => setFromEmail(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Defaults to verified <code className="font-mono">noreply@digireps.org</code>
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cReplyTo" className="text-xs font-semibold text-foreground">
+                      Reply-To Email (Optional)
+                    </Label>
+                    <Input
+                      id="cReplyTo"
+                      placeholder="e.g. support@digireps.org"
+                      value={replyTo}
+                      onChange={(e) => setReplyTo(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Where prospect replies are directed.</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Card 2: Email Content & Design */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base">2. Email Content & Outreach Sequence</CardTitle>
-              <CardDescription>
-                Build an automated multi-step follow-up sequence, or choose single email broadcast
-              </CardDescription>
+          {/* Card 2: Email Content & Sequence Builder */}
+          <Card className="rounded-2xl border shadow-xs overflow-hidden">
+            <CardHeader className="bg-muted/30 pb-4 border-b">
+              <div className="flex items-center gap-2.5">
+                <span className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                  2
+                </span>
+                <div>
+                  <CardTitle className="text-base font-bold">Email Content &amp; Outreach Sequence</CardTitle>
+                  <CardDescription className="text-xs">
+                    Choose automated follow-up sequences, single visual composer, or saved HTML templates
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 space-y-4">
               <Tabs 
                 value={contentMode} 
                 onValueChange={(val) => setContentMode(val as 'sequence' | 'custom' | 'template')}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-4 h-auto p-1 gap-1">
-                  <TabsTrigger value="sequence" className="flex items-center gap-1.5 py-2">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-6 h-auto p-1.5 gap-1.5 bg-muted/60 rounded-xl border">
+                  <TabsTrigger value="sequence" className="flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
                     <Sparkles className="h-4 w-4 text-primary" />
                     Multi-Step Sequence (Follow-ups)
                   </TabsTrigger>
-                  <TabsTrigger value="custom" className="flex items-center gap-1.5 py-2">
+                  <TabsTrigger value="custom" className="flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
                     <Edit3 className="h-4 w-4" />
-                    Single Email (Custom Body)
+                    Single Email (Visual Composer)
                   </TabsTrigger>
-                  <TabsTrigger value="template" className="flex items-center gap-1.5 py-2">
+                  <TabsTrigger value="template" className="flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
                     <FileCode2 className="h-4 w-4" />
                     Use Saved Template
                   </TabsTrigger>
@@ -422,6 +495,7 @@ export default function NewCampaignPage() {
                     onContactIndexChange={setPreviewContactIndex}
                   />
                 </TabsContent>
+
 
 
                 {/* Mode 1: Template Selection */}
@@ -586,24 +660,41 @@ export default function NewCampaignPage() {
 
             </CardContent>
 
-            <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/20 border-t pt-4">
-              <div className="text-xs text-muted-foreground font-medium">
+            <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/30 border-t p-5 rounded-b-2xl">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
                 {currentStep ? (
-                  <span className="text-primary font-semibold flex items-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span className="text-primary font-bold flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     {currentStep}
                   </span>
                 ) : (
-                  'Ready to dispatch via AWS SES'
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-foreground font-semibold">
+                      <Send className="h-3.5 w-3.5 text-primary" />
+                      Amazon SES Engine
+                    </span>
+                    <span>•</span>
+                    <span>{contentMode === 'sequence' ? `${sequenceSteps.length} Sequence Steps` : 'Single Email Broadcast'}</span>
+                    {audienceId && (
+                      <>
+                        <span>•</span>
+                        <span className="text-primary font-medium">
+                          {audiences.find((a) => a.id === audienceId)?._count?.contacts ?? 0} Recipients
+                        </span>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button
                   type="button"
                   variant="outline"
+                  size="default"
                   disabled={submitting}
                   onClick={() => handleSubmit(false)}
+                  className="rounded-xl shadow-xs text-xs font-semibold"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save as Draft
@@ -611,9 +702,10 @@ export default function NewCampaignPage() {
 
                 <Button
                   type="button"
+                  size="default"
                   disabled={submitting || !name.trim() || !audienceId}
                   onClick={() => handleSubmit(true)}
-                  className="bg-primary hover:bg-primary/90"
+                  className="bg-primary hover:bg-primary/90 rounded-xl shadow-sm text-xs font-bold px-5"
                 >
                   {submitting ? (
                     <>
@@ -622,7 +714,7 @@ export default function NewCampaignPage() {
                     </>
                   ) : (
                     <>
-                      <Play className="mr-2 h-4 w-4" />
+                      <Play className="mr-2 h-4 w-4 fill-current" />
                       Create &amp; Send Now
                     </>
                   )}
