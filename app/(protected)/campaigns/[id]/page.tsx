@@ -167,6 +167,7 @@ export default function CampaignDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingSteps, setEditingSteps] = useState<any[]>([])
   const [editTrackOpens, setEditTrackOpens] = useState(true)
+  const [editTrackClicks, setEditTrackClicks] = useState(true)
   const [editSubject, setEditSubject] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
 
@@ -186,6 +187,7 @@ export default function CampaignDetailPage() {
         ]
     setEditingSteps(steps)
     setEditTrackOpens(campaign.trackOpens ?? true)
+    setEditTrackClicks(campaign.trackClicks ?? true)
     setEditSubject(campaign.subject || '')
     setIsEditOpen(true)
   }
@@ -197,6 +199,7 @@ export default function CampaignDetailPage() {
       await updateCampaign(campaign.id, {
         subject: editSubject.trim() || undefined,
         trackOpens: editTrackOpens,
+        trackClicks: editTrackClicks,
         steps: editingSteps.map((s, idx) => ({
           ...s,
           stepOrder: idx + 1,
@@ -215,6 +218,7 @@ export default function CampaignDetailPage() {
       setSavingEdit(false)
     }
   }
+
 
 
   const getStatusBadge = (status: string) => {
@@ -807,20 +811,38 @@ export default function CampaignDetailPage() {
               </div>
 
               {/* Deliverability Options */}
-              <div className="p-3.5 rounded-xl border bg-muted/20 flex items-start justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-foreground">Track Email Opens (1×1 Tracking Pixel)</span>
-                  <p className="text-[11px] text-muted-foreground">
-                    Disable for cold outreach to avoid Gmail image blocking warnings.
-                  </p>
+              <div className="space-y-3">
+                <div className="p-3.5 rounded-xl border bg-muted/20 flex items-start justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-foreground">Track Email Opens (1×1 Tracking Pixel)</span>
+                    <p className="text-[11px] text-muted-foreground">
+                      Disable for cold outreach to avoid Gmail image blocking warnings.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={editTrackOpens}
+                    onChange={(e) => setEditTrackOpens(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary mt-1 cursor-pointer"
+                  />
                 </div>
-                <input
-                  type="checkbox"
-                  checked={editTrackOpens}
-                  onChange={(e) => setEditTrackOpens(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary mt-1 cursor-pointer"
-                />
+
+                <div className="p-3.5 rounded-xl border bg-muted/20 flex items-start justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-foreground">Track Link Clicks (Click Tracking)</span>
+                    <p className="text-[11px] text-muted-foreground">
+                      Disable for cold outreach so links remain 100% direct and raw without any tracking redirects (<em>awstrack.me</em> or server URLs).
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={editTrackClicks}
+                    onChange={(e) => setEditTrackClicks(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary mt-1 cursor-pointer"
+                  />
+                </div>
               </div>
+
 
               {/* Steps Editor */}
               <div className="space-y-5">

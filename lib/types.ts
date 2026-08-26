@@ -110,7 +110,9 @@ export interface Campaign {
   status: CampaignStatus
   isSequence?: boolean
   trackOpens?: boolean
+  trackClicks?: boolean
   audienceId: string
+
   subject?: string | null
   fromName?: string | null
   fromEmail?: string | null

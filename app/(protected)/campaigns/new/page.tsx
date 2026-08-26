@@ -69,6 +69,8 @@ export default function NewCampaignPage() {
   const [selectedTemplateHtml, setSelectedTemplateHtml] = useState('')
   const [customHtml, setCustomHtml] = useState('')
   const [trackOpens, setTrackOpens] = useState(true)
+  const [trackClicks, setTrackClicks] = useState(true)
+
 
 
   // Multi-step follow-up sequence steps
@@ -214,12 +216,14 @@ export default function NewCampaignPage() {
         htmlBody: contentMode === 'custom' ? customHtml : (contentMode === 'sequence' ? sequenceSteps[0]?.htmlBody : undefined),
         isSequence: contentMode === 'sequence',
         trackOpens,
+        trackClicks,
         steps: contentMode === 'sequence' ? sequenceSteps.map((s, idx) => ({
           ...s,
           stepOrder: idx + 1,
           subject: idx === 0 ? (s.subject || subject).trim() : s.subject?.trim(),
         })) : undefined,
       }
+
 
       const campaign = await createCampaign(campaignPayload)
 
@@ -449,7 +453,7 @@ export default function NewCampaignPage() {
                 </div>
 
                 {/* Deliverability & Tracking Options */}
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t space-y-3">
                   <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
                     <div className="space-y-1">
                       <Label htmlFor="trackOpens" className="text-xs font-bold text-foreground flex items-center gap-1.5 cursor-pointer">
@@ -467,10 +471,29 @@ export default function NewCampaignPage() {
                       className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary mt-1 cursor-pointer"
                     />
                   </div>
+
+                  <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-1">
+                      <Label htmlFor="trackClicks" className="text-xs font-bold text-foreground flex items-center gap-1.5 cursor-pointer">
+                        Track Link Clicks (Click Tracking)
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Rewrites hyperlinks to track click rates. <strong>Disable for cold outreach</strong> so links remain 100% direct and raw without any tracking redirects (<em>awstrack.me</em> or server URLs).
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="trackClicks"
+                      checked={trackClicks}
+                      onChange={(e) => setTrackClicks(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary mt-1 cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
 
 
           {/* Card 2: Email Content & Sequence Builder */}

@@ -96,6 +96,8 @@ export const createCampaign = (body: {
   htmlBody?: string
   templateId?: string
   isSequence?: boolean
+  trackOpens?: boolean
+  trackClicks?: boolean
   steps?: SequenceStepInput[]
 }) => req<Campaign>("/campaigns", { method: "POST", body: JSON.stringify(body) })
 export const getCampaignSteps = (id: string) => req<CampaignStep[]>(`/campaigns/${id}/steps`)
@@ -122,9 +124,11 @@ export const updateCampaign = (
     htmlBody: string
     templateId: string
     trackOpens: boolean
+    trackClicks: boolean
     steps: SequenceStepInput[]
   }>,
 ) => req<Campaign>(`/campaigns/${id}`, { method: "PATCH", body: JSON.stringify(body) })
+
 
 export const markLeadReplied = (campaignId: string, leadId: string) =>
 
