@@ -111,8 +111,24 @@ export const cancelCampaign = (id: string) => req<Campaign>(`/campaigns/${id}/ca
 export const deleteCampaign = (id: string) =>
   req<{ id: string; deleted: boolean }>(`/campaigns/${id}`, { method: "DELETE" })
 
+export const updateCampaign = (
+  id: string,
+  body: Partial<{
+    name: string
+    subject: string
+    fromName: string
+    fromEmail: string
+    replyTo: string
+    htmlBody: string
+    templateId: string
+    trackOpens: boolean
+    steps: SequenceStepInput[]
+  }>,
+) => req<Campaign>(`/campaigns/${id}`, { method: "PATCH", body: JSON.stringify(body) })
 
 export const markLeadReplied = (campaignId: string, leadId: string) =>
+
+
   req<any>(`/campaigns/${campaignId}/leads/${leadId}/reply`, { method: "POST" })
 
 // ── Analytics ────────────────────────────────────────────────────────────────

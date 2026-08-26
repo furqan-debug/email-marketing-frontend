@@ -22,7 +22,10 @@ import {
   Activity,
   Layers,
   Globe,
-  ExternalLink
+  ExternalLink,
+  Edit3,
+  Save,
+  Clock
 } from 'lucide-react'
 import { 
   getCampaign, 
@@ -32,11 +35,13 @@ import {
   pauseCampaign, 
   resumeCampaign, 
   cancelCampaign, 
+  updateCampaign,
   generateMessages,
   getSequenceProgress,
   markLeadReplied,
   getCampaignActivity
 } from '@/lib/api'
+
 
 import type { Campaign, AnalyticsSnapshot, SequenceProgress, ActivityEvent } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -157,6 +162,60 @@ export default function CampaignDetailPage() {
       setActionLoading(false)
     }
   }
+
+  // Edit Sequence State & Handlers
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editingSteps, setEditingSteps] = useState<any[]>([])
+  const [editTrackOpens, setEditTrackOpens] = useState(true)
+  const [editSubject, setEditSubject] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  const handleOpenEdit = () => {
+    if (!campaign) return
+    const steps = campaign.steps && campaign.steps.length > 0
+      ? campaign.steps.map((s, idx) => ({
+          stepOrder: s.stepOrder || idx + 1,
+          delayHours: s.delayHours ?? (idx === 0 ? 0 : 48),
+          sendAsReply: s.sendAsReply ?? (idx > 0),
+          subject: s.subject || '',
+          htmlBody: s.htmlBody || '',
+        }))
+      : [
+          { stepOrder: 1, delayHours: 0, sendAsReply: false, subject: campaign.subject || '', htmlBody: campaign.htmlBody || '' },
+          { stepOrder: 2, delayHours: 48, sendAsReply: true, subject: '', htmlBody: '' },
+        ]
+    setEditingSteps(steps)
+    setEditTrackOpens(campaign.trackOpens ?? true)
+    setEditSubject(campaign.subject || '')
+    setIsEditOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!campaign) return
+    setSavingEdit(true)
+    try {
+      await updateCampaign(campaign.id, {
+        subject: editSubject.trim() || undefined,
+        trackOpens: editTrackOpens,
+        steps: editingSteps.map((s, idx) => ({
+          ...s,
+          stepOrder: idx + 1,
+          subject: idx === 0 ? (s.subject || editSubject).trim() : s.subject?.trim(),
+        })),
+      })
+      setActionMessage({
+        type: 'success',
+        text: 'Sequence updated! Changes will apply to all pending / scheduled follow-ups.',
+      })
+      setIsEditOpen(false)
+      await loadData()
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.message || 'Failed to update sequence' })
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -339,6 +398,20 @@ export default function CampaignDetailPage() {
 
 
 
+          {/* Edit Sequence / Follow-ups button */}
+          {(campaign.isSequence || (campaign.steps && campaign.steps.length > 0)) && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={actionLoading}
+              onClick={handleOpenEdit}
+              className="h-8 text-xs font-semibold bg-background hover:bg-muted/40 border text-foreground"
+            >
+              <Edit3 className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              Edit Follow-ups
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -349,6 +422,7 @@ export default function CampaignDetailPage() {
             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${actionLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+
         </div>
       </div>
 
@@ -703,6 +777,146 @@ export default function CampaignDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Sequence & Follow-up Modal */}
+      {isEditOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-background border rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/30">
+              <div>
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  <Edit3 className="h-4 w-4 text-primary" />
+                  Edit Sequence &amp; Follow-up Settings
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Update follow-up copy, timing delays, or deliverability settings for upcoming emails.
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setIsEditOpen(false)}>
+                ✕
+              </Button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Informational Alert */}
+              <div className="bg-blue-500/10 border border-blue-500/20 text-blue-800 dark:text-blue-200 text-xs p-3.5 rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Live Sequence Update:</strong> Any changes made here will apply to all <strong>future / scheduled follow-ups</strong>. Emails already delivered (Step 1) will remain unchanged and will not be re-sent.
+                </div>
+              </div>
+
+              {/* Deliverability Options */}
+              <div className="p-3.5 rounded-xl border bg-muted/20 flex items-start justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-foreground">Track Email Opens (1×1 Tracking Pixel)</span>
+                  <p className="text-[11px] text-muted-foreground">
+                    Disable for cold outreach to avoid Gmail image blocking warnings.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={editTrackOpens}
+                  onChange={(e) => setEditTrackOpens(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary mt-1 cursor-pointer"
+                />
+              </div>
+
+              {/* Steps Editor */}
+              <div className="space-y-5">
+                {editingSteps.map((step, idx) => (
+                  <div key={idx} className="border rounded-xl p-4 bg-card space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                        {idx === 0 ? 'Step 1: Initial Email' : `Step ${idx + 1}: Follow-up #${idx}`}
+                      </span>
+                      {idx > 0 && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-muted-foreground">Delay:</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={step.delayHours}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0
+                              setEditingSteps((prev) =>
+                                prev.map((s, i) => (i === idx ? { ...s, delayHours: val } : s))
+                              )
+                            }}
+                            className="w-16 h-7 text-xs border rounded px-2 bg-background font-medium"
+                          />
+                          <span className="text-muted-foreground">hours</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {idx === 0 ? (
+                      <div>
+                        <label className="text-xs font-medium text-foreground mb-1 block">Subject Line</label>
+                        <input
+                          type="text"
+                          value={step.subject || editSubject}
+                          onChange={(e) => {
+                            setEditSubject(e.target.value)
+                            setEditingSteps((prev) =>
+                              prev.map((s, i) => (i === 0 ? { ...s, subject: e.target.value } : s))
+                            )
+                          }}
+                          className="w-full h-8 text-xs border rounded px-3 bg-background"
+                          placeholder="Email subject..."
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={step.sendAsReply ?? true}
+                            onChange={(e) => {
+                              setEditingSteps((prev) =>
+                                prev.map((s, i) => (i === idx ? { ...s, sendAsReply: e.target.checked } : s))
+                              )
+                            }}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-primary cursor-pointer"
+                          />
+                          <span>Send as Threaded Reply (Re: Initial Subject)</span>
+                        </label>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">Email HTML / Text Body</label>
+                      <textarea
+                        rows={6}
+                        value={step.htmlBody || ''}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setEditingSteps((prev) =>
+                            prev.map((s, i) => (i === idx ? { ...s, htmlBody: val } : s))
+                          )
+                        }}
+                        className="w-full text-xs border rounded-lg p-3 font-mono focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                        placeholder="Type email body here... supports {{firstName}}, {{company_name}}, etc."
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 border-t bg-muted/20 flex items-center justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsEditOpen(false)} disabled={savingEdit}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="bg-primary hover:bg-primary/90">
+                {savingEdit ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
