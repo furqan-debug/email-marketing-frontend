@@ -325,6 +325,20 @@ export default function CampaignDetailPage() {
             </>
           )}
 
+          {campaign.status === 'COMPLETED' && ((sequenceProgress?.statusCounts?.ACTIVE || 0) > 0 || sent === 0) && (
+            <Button
+              size="sm"
+              disabled={actionLoading}
+              onClick={() => handleAction('send')}
+              className="h-8 text-xs font-semibold bg-primary hover:bg-primary/90"
+            >
+              <Play className="h-3.5 w-3.5 mr-1.5 fill-current" />
+              Dispatch Active Leads
+            </Button>
+          )}
+
+
+
           <Button
             variant="outline"
             size="sm"
