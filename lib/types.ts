@@ -109,6 +109,7 @@ export interface Campaign {
   name: string
   status: CampaignStatus
   isSequence?: boolean
+  trackOpens?: boolean
   audienceId: string
   subject?: string | null
   fromName?: string | null
@@ -120,6 +121,7 @@ export interface Campaign {
   snapshot?: AnalyticsSnapshot | null
   _count?: { leads?: number; messages?: number }
 }
+
 
 export interface AnalyticsRates {
   deliveryRate: number

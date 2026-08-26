@@ -68,6 +68,8 @@ export default function NewCampaignPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedTemplateHtml, setSelectedTemplateHtml] = useState('')
   const [customHtml, setCustomHtml] = useState('')
+  const [trackOpens, setTrackOpens] = useState(true)
+
 
   // Multi-step follow-up sequence steps
   const [sequenceSteps, setSequenceSteps] = useState<SequenceStepInput[]>([
@@ -211,12 +213,14 @@ export default function NewCampaignPage() {
         templateId: contentMode === 'template' ? selectedTemplateId : undefined,
         htmlBody: contentMode === 'custom' ? customHtml : (contentMode === 'sequence' ? sequenceSteps[0]?.htmlBody : undefined),
         isSequence: contentMode === 'sequence',
+        trackOpens,
         steps: contentMode === 'sequence' ? sequenceSteps.map((s, idx) => ({
           ...s,
           stepOrder: idx + 1,
           subject: idx === 0 ? (s.subject || subject).trim() : s.subject?.trim(),
         })) : undefined,
       }
+
       const campaign = await createCampaign(campaignPayload)
 
       // 2. Generate Messages (only needed for single-shot campaigns, sequence handles leads dynamically)
@@ -443,9 +447,31 @@ export default function NewCampaignPage() {
                     <p className="text-[10px] text-muted-foreground">Where prospect replies are directed.</p>
                   </div>
                 </div>
+
+                {/* Deliverability & Tracking Options */}
+                <div className="pt-4 border-t">
+                  <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-1">
+                      <Label htmlFor="trackOpens" className="text-xs font-bold text-foreground flex items-center gap-1.5 cursor-pointer">
+                        Track Email Opens (1×1 Tracking Pixel)
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Injects an invisible pixel to track open rates. <strong>Disable for cold outreach</strong> if you want clean text delivery without Gmail image blocking banners (<em>"Images are not displayed"</em>).
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="trackOpens"
+                      checked={trackOpens}
+                      onChange={(e) => setTrackOpens(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary mt-1 cursor-pointer"
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
+
 
           {/* Card 2: Email Content & Sequence Builder */}
           <Card className="rounded-2xl border shadow-xs overflow-hidden">
