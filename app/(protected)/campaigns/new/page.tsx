@@ -629,25 +629,46 @@ export default function NewCampaignPage() {
                               </div>
                             )}
 
+                            {/* Rendered Email Envelope with Subject & Body */}
+                            <div className="border rounded-xl bg-card shadow-xs overflow-hidden">
 
-                            {/* Rendered Email Body */}
-                            <div className="border rounded-lg bg-white p-6 shadow-xs max-h-[380px] overflow-y-auto">
-                              <div
-                                dangerouslySetInnerHTML={{
-                                  __html: renderContactPreview(selectedTemplateHtml, activeContact),
-                                }}
-                                className={`email-content-editable ${
-                                  selectedTemplateHtml.includes('line-height: 1.25') || 
-                                  selectedTemplateHtml.includes('line-height: 1.3') || 
-                                  selectedTemplateHtml.includes('margin-bottom: 4px') || 
-                                  selectedTemplateHtml.includes('spacing-compact')
-                                    ? 'spacing-compact'
-                                    : selectedTemplateHtml.includes('line-height: 2') || 
-                                      selectedTemplateHtml.includes('spacing-relaxed')
-                                    ? 'spacing-relaxed'
-                                    : 'spacing-normal'
-                                }`}
-                              />
+                              {subject && (
+                                <div className="p-4 bg-muted/20 border-b space-y-1.5 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-muted-foreground w-12 shrink-0">To:</span>
+                                    <span className="font-medium text-foreground truncate">
+                                      {activeContact
+                                        ? `${[activeContact.firstName, activeContact.lastName].filter(Boolean).join(' ') || 'Recipient'} <${activeContact.email}>`
+                                        : 'Alex Morgan <alex@example.com>'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <span className="font-bold text-foreground w-12 shrink-0 mt-0.5">Subject:</span>
+                                    <span className="font-bold text-sm text-primary leading-snug">
+                                      {renderContactPreview(subject, activeContact)}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="p-6 bg-white text-zinc-900 max-h-[380px] overflow-y-auto">
+                                <div
+                                  dangerouslySetInnerHTML={{
+                                    __html: renderContactPreview(selectedTemplateHtml, activeContact),
+                                  }}
+                                  className={`email-content-editable ${
+                                    selectedTemplateHtml.includes('line-height: 1.25') || 
+                                    selectedTemplateHtml.includes('line-height: 1.3') || 
+                                    selectedTemplateHtml.includes('margin-bottom: 4px') || 
+                                    selectedTemplateHtml.includes('spacing-compact')
+                                      ? 'spacing-compact'
+                                      : selectedTemplateHtml.includes('line-height: 2') || 
+                                        selectedTemplateHtml.includes('spacing-relaxed')
+                                      ? 'spacing-relaxed'
+                                      : 'spacing-normal'
+                                  }`}
+                                />
+                              </div>
                             </div>
                           </div>
                         )
@@ -662,6 +683,7 @@ export default function NewCampaignPage() {
                   <EmailComposer
                     value={customHtml}
                     onChange={setCustomHtml}
+                    subject={subject}
                     placeholder="Type your email broadcast message here..."
                     minHeight="260px"
                     contacts={previewContacts}
@@ -670,6 +692,7 @@ export default function NewCampaignPage() {
                   />
                 </TabsContent>
               </Tabs>
+
 
             </CardContent>
 

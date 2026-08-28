@@ -44,6 +44,7 @@ import { renderContactPreview } from '@/lib/utils'
 interface EmailComposerProps {
   value: string
   onChange: (value: string) => void
+  subject?: string
   placeholder?: string
   minHeight?: string
   contacts?: any[]
@@ -97,12 +98,14 @@ const EMOJIS = [
 export default function EmailComposer({
   value,
   onChange,
+  subject,
   placeholder = 'Write your email message here...',
   minHeight = '320px',
   contacts = [],
   selectedContactIndex,
   onContactIndexChange,
 }: EmailComposerProps) {
+
   const [activeTab, setActiveTab] = useState<'visual' | 'code' | 'preview'>('visual')
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [lineSpacing, setLineSpacing] = useState<'normal' | 'compact' | 'relaxed'>('normal')
@@ -1002,24 +1005,47 @@ export default function EmailComposer({
             </div>
 
             <div
-              className={`mx-auto transition-all bg-white text-zinc-900 border rounded-lg p-6 shadow-sm ${
-                previewDevice === 'mobile' ? 'max-w-[375px]' : 'max-w-2xl'
+              className={`mx-auto transition-all bg-white text-zinc-900 border rounded-xl shadow-xs overflow-hidden ${
+                previewDevice === 'mobile' ? 'max-w-[375px]' : 'max-w-2xl w-full'
               }`}
               style={{ minHeight }}
             >
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: renderContactPreview(value, activeContact),
-                }}
-                className={`email-content-editable ${
-                  lineSpacing === 'compact' 
-                    ? 'spacing-compact' 
-                    : lineSpacing === 'relaxed' 
-                    ? 'spacing-relaxed' 
-                    : 'spacing-normal'
-                }`}
-              />
+              {/* Subject Line Header Preview */}
+              {subject && (
+                <div className="p-4 bg-muted/20 border-b space-y-1.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-muted-foreground w-12 shrink-0">To:</span>
+                    <span className="font-medium text-foreground truncate">
+                      {activeContact
+                        ? `${[activeContact.firstName, activeContact.lastName].filter(Boolean).join(' ') || 'Recipient'} <${activeContact.email}>`
+                        : 'Alex Morgan <alex@example.com>'}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-bold text-foreground w-12 shrink-0 mt-0.5">Subject:</span>
+                    <span className="font-bold text-sm text-primary leading-snug">
+                      {renderContactPreview(subject, activeContact)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-6">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: renderContactPreview(value, activeContact),
+                  }}
+                  className={`email-content-editable ${
+                    lineSpacing === 'compact' 
+                      ? 'spacing-compact' 
+                      : lineSpacing === 'relaxed' 
+                      ? 'spacing-relaxed' 
+                      : 'spacing-normal'
+                  }`}
+                />
+              </div>
             </div>
+
           </div>
         )}
       </div>

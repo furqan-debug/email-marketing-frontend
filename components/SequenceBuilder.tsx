@@ -11,13 +11,20 @@ import {
   ArrowDown,
   Calendar,
   CalendarDays,
-  Timer
+  Timer,
+  Eye,
+  Edit3,
+  Monitor,
+  Smartphone,
+  Sparkles
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import EmailComposer from '@/components/EmailComposer'
+import ContactPreviewPicker from '@/components/ContactPreviewPicker'
+import { renderContactPreview } from '@/lib/utils'
 import type { SequenceStepInput, Contact } from '@/lib/types'
 
 interface SequenceBuilderProps {
@@ -39,6 +46,10 @@ export default function SequenceBuilder({
   selectedContactIndex = 0,
   onContactIndexChange,
 }: SequenceBuilderProps) {
+  // Mode per step: 'edit' or 'preview'
+  const [stepModes, setStepModes] = useState<Record<number, 'edit' | 'preview'>>({})
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
+
   // Ensure we always have at least Step 1
   const sequenceSteps = steps.length > 0 ? steps : [
     {
@@ -51,6 +62,7 @@ export default function SequenceBuilder({
       htmlBody: '',
     }
   ]
+
 
   // Track which connector has its expanded scheduling drawer open (default open for easy editing)
   const [expandedConnectors, setExpandedConnectors] = useState<Record<number, boolean>>({})
@@ -284,7 +296,7 @@ export default function SequenceBuilder({
               {/* Step Card */}
               <div className="border rounded-2xl bg-card shadow-xs overflow-hidden transition-all hover:shadow-md">
                 {/* Step Header */}
-                <div className="flex flex-wrap items-center justify-between bg-muted/40 px-5 py-3.5 border-b gap-2">
+                <div className="flex flex-wrap items-center justify-between bg-muted/40 px-5 py-3.5 border-b gap-3">
                   <div className="flex items-center gap-3">
                     <span className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shadow-xs ${
                       isStep1 
@@ -322,112 +334,226 @@ export default function SequenceBuilder({
                     </div>
                   </div>
 
-                  {!isStep1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeStep(idx)}
-                      className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />
-                      Remove Step
-                    </Button>
-                  )}
-                </div>
-
-                {/* Step Content Form */}
-                <div className="p-5 space-y-4">
-                  {/* Step 1: Subject Line */}
-                  {isStep1 ? (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs font-bold flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-primary" />
-                          Initial Email Subject Line *
-                        </Label>
-                        <span className="text-[10px] text-muted-foreground">
-                          Supports merge tags: <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono font-medium">{'{{first_name}}'}</code>, <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono font-medium">{'{{company_name}}'}</code>
-                        </span>
-                      </div>
-                      <Input
-                        value={initialSubject}
-                        onChange={(e) => {
-                          onInitialSubjectChange(e.target.value)
-                          updateStep(0, { subject: e.target.value })
-                        }}
-                        placeholder="e.g. Quick question regarding {{company_name}}"
-                        className="text-sm font-medium h-10"
-                      />
+                  {/* Top Action Controls: Compose vs Live Preview + Remove */}
+                  <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center bg-muted p-0.5 rounded-lg border text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setStepModes((prev) => ({ ...prev, [idx]: 'edit' }))}
+                        className={`px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
+                          (stepModes[idx] || 'edit') === 'edit'
+                            ? 'bg-background text-foreground shadow-xs'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Compose
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStepModes((prev) => ({ ...prev, [idx]: 'preview' }))}
+                        className={`px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
+                          stepModes[idx] === 'preview'
+                            ? 'bg-background text-primary shadow-xs'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        Live Preview
+                      </button>
                     </div>
-                  ) : (
-                    /* Step 2..N: Threading Option or Custom Subject */
-                    <div className="space-y-3 bg-muted/30 border rounded-xl p-4">
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={step.sendAsReply}
-                            onChange={(e) => updateStep(idx, { sendAsReply: e.target.checked })}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                          />
-                          <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                            <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                            Send as a reply in the existing conversation thread (Re: ...)
-                          </span>
-                        </label>
-                        <span className="text-[10px] text-primary uppercase font-bold tracking-wider bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                          Recommended
-                        </span>
-                      </div>
 
-                      {step.sendAsReply ? (
-                        <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
-                          📬 Email subject will automatically be set to <span className="font-semibold text-foreground">Re: {initialSubject || 'Your Subject'}</span> and linked with standard <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">In-Reply-To</code> headers so Gmail, Google Workspace, and Outlook nest it directly into the original conversation thread.
-                        </p>
-                      ) : (
-                        <div className="space-y-1.5 pl-6 pt-1">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <Mail className="h-3.5 w-3.5 text-primary" />
-                            New Separate Subject Line:
-                          </Label>
-                          <Input
-                            value={step.subject || ''}
-                            onChange={(e) => updateStep(idx, { subject: e.target.value })}
-                            placeholder="e.g. Following up on my previous note"
-                            className="text-xs h-9"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Visual Email Composer for this step */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-bold text-foreground">
-                        {isStep1 ? 'Initial Email Body:' : `Follow-up #${idx} Message Body:`}
-                      </Label>
-                    </div>
-                    <EmailComposer
-                      value={step.htmlBody}
-                      onChange={(html) => updateStep(idx, { htmlBody: html })}
-                      placeholder={
-                        isStep1
-                          ? 'Write your compelling opening message here...'
-                          : `Write your follow-up message (e.g. "Hi {{first_name}}, just wanted to bump this to the top of your inbox...")...`
-                      }
-                      minHeight="220px"
-                      contacts={contacts}
-                      selectedContactIndex={selectedContactIndex}
-                      onContactIndexChange={onContactIndexChange}
-                    />
+                    {!isStep1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeStep(idx)}
+                        className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Remove
+                      </Button>
+                    )}
                   </div>
                 </div>
+
+                {/* Step Content: Compose Mode vs Live Preview Mode */}
+                {stepModes[idx] === 'preview' ? (
+                  <div className="p-5 space-y-4">
+                    {/* Recipient Switcher Bar placed directly above Subject Line */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-muted/40 border rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground">Previewing for:</span>
+                        <ContactPreviewPicker
+                          contacts={contacts}
+                          selectedIndex={selectedContactIndex}
+                          onSelectIndex={onContactIndexChange || (() => {})}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1 bg-background border p-0.5 rounded-lg text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDevice('desktop')}
+                          className={`px-2.5 py-1 rounded flex items-center gap-1 font-medium ${
+                            previewDevice === 'desktop' ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground'
+                          }`}
+                        >
+                          <Monitor className="h-3.5 w-3.5" /> Desktop
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDevice('mobile')}
+                          className={`px-2.5 py-1 rounded flex items-center gap-1 font-medium ${
+                            previewDevice === 'mobile' ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground'
+                          }`}
+                        >
+                          <Smartphone className="h-3.5 w-3.5" /> Mobile
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Email Client Preview Box (Personalized Subject + Personalized Body) */}
+                    {(() => {
+                      const activeContact = contacts && contacts.length > 0 ? (contacts[selectedContactIndex] || contacts[0]) : null
+                      const rawSubject = isStep1
+                        ? (step.subject || initialSubject)
+                        : step.sendAsReply
+                          ? `Re: ${initialSubject || 'Your Subject'}`
+                          : (step.subject || '')
+
+                      return (
+                        <div className={`mx-auto transition-all ${previewDevice === 'mobile' ? 'max-w-[380px]' : 'w-full'}`}>
+                          <div className="border rounded-xl bg-card shadow-xs overflow-hidden">
+                            {/* Subject Line & Envelope Header */}
+                            <div className="p-4 bg-muted/20 border-b space-y-2 text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-muted-foreground w-14 shrink-0">To:</span>
+                                <span className="font-medium text-foreground truncate">
+                                  {activeContact
+                                    ? `${[activeContact.firstName, activeContact.lastName].filter(Boolean).join(' ') || 'Recipient'} <${activeContact.email}>`
+                                    : 'Alex Morgan <alex@example.com>'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-start gap-2">
+                                <span className="font-bold text-foreground w-14 shrink-0 mt-0.5">Subject:</span>
+                                <span className="font-bold text-sm text-primary leading-snug">
+                                  {renderContactPreview(rawSubject, activeContact) || '(No subject specified)'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Rendered Email Body */}
+                            <div className="p-6 bg-white text-zinc-900 min-h-[220px]">
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html: renderContactPreview(step.htmlBody, activeContact),
+                                }}
+                                className="email-content-editable spacing-normal"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <div className="p-5 space-y-4">
+                    {/* Step 1: Subject Line */}
+                    {isStep1 ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-bold flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-primary" />
+                            Initial Email Subject Line *
+                          </Label>
+                          <span className="text-[10px] text-muted-foreground">
+                            Supports merge tags: <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono font-medium">{'{{first_name}}'}</code>, <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono font-medium">{'{{company_name}}'}</code>
+                          </span>
+                        </div>
+                        <Input
+                          value={initialSubject}
+                          onChange={(e) => {
+                            onInitialSubjectChange(e.target.value)
+                            updateStep(0, { subject: e.target.value })
+                          }}
+                          placeholder="e.g. Quick question regarding {{company_name}}"
+                          className="text-sm font-medium h-10"
+                        />
+                      </div>
+                    ) : (
+                      /* Step 2..N: Threading Option or Custom Subject */
+                      <div className="space-y-3 bg-muted/30 border rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={step.sendAsReply}
+                              onChange={(e) => updateStep(idx, { sendAsReply: e.target.checked })}
+                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                            />
+                            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                              Send as a reply in the existing conversation thread (Re: ...)
+                            </span>
+                          </label>
+                          <span className="text-[10px] text-primary uppercase font-bold tracking-wider bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                            Recommended
+                          </span>
+                        </div>
+
+                        {step.sendAsReply ? (
+                          <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
+                            📬 Email subject will automatically be set to <span className="font-semibold text-foreground">Re: {initialSubject || 'Your Subject'}</span> and linked with standard <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">In-Reply-To</code> headers so Gmail, Google Workspace, and Outlook nest it directly into the original conversation thread.
+                          </p>
+                        ) : (
+                          <div className="space-y-1.5 pl-6 pt-1">
+                            <Label className="text-xs font-semibold flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5 text-primary" />
+                              New Separate Subject Line:
+                            </Label>
+                            <Input
+                              value={step.subject || ''}
+                              onChange={(e) => updateStep(idx, { subject: e.target.value })}
+                              placeholder="e.g. Following up on my previous note"
+                              className="text-xs h-9"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Visual Email Composer for this step */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold text-foreground">
+                          {isStep1 ? 'Initial Email Body:' : `Follow-up #${idx} Message Body:`}
+                        </Label>
+                      </div>
+                      <EmailComposer
+                        value={step.htmlBody}
+                        onChange={(html) => updateStep(idx, { htmlBody: html })}
+                        subject={isStep1 ? (step.subject || initialSubject) : (step.sendAsReply ? `Re: ${initialSubject || 'Your Subject'}` : step.subject)}
+                        placeholder={
+                          isStep1
+                            ? 'Write your compelling opening message here...'
+                            : `Write your follow-up message (e.g. "Hi {{first_name}}, just wanted to bump this to the top of your inbox...")...`
+                        }
+                        minHeight="220px"
+                        contacts={contacts}
+                        selectedContactIndex={selectedContactIndex}
+                        onContactIndexChange={onContactIndexChange}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )
         })}
+
       </div>
 
       {/* Add Follow-Up Step Button */}
