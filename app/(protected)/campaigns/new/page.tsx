@@ -139,11 +139,12 @@ export default function NewCampaignPage() {
       return
     }
     setLoadingContacts(true)
-    getContacts(audienceId, 1, 100)
+    getContacts(audienceId, 1, 10000)
       .then((res) => {
         setPreviewContacts(res.data || [])
         setPreviewContactIndex(0)
       })
+
       .catch((err) => {
         console.warn('Failed to fetch audience contacts for preview:', err)
         setPreviewContacts([])
