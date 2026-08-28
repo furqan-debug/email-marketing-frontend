@@ -48,6 +48,8 @@ import {
 } from '@/components/ui/select'
 import EmailComposer from '@/components/EmailComposer'
 import SequenceBuilder from '@/components/SequenceBuilder'
+import ContactPreviewPicker from '@/components/ContactPreviewPicker'
+
 
 export default function NewCampaignPage() {
   const router = useRouter()
@@ -609,63 +611,24 @@ export default function NewCampaignPage() {
                             {previewContacts.length > 0 && (
                               <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/40 border rounded-lg px-3 py-2 text-xs">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-muted-foreground flex items-center gap-1">
-                                    <User className="h-3.5 w-3.5 text-primary" />
-                                    Member {previewContactIndex + 1} of {previewContacts.length}:
-                                  </span>
-
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      disabled={previewContactIndex <= 0}
-                                      onClick={() => setPreviewContactIndex(Math.max(0, previewContactIndex - 1))}
-                                      title="Previous Audience Member"
-                                    >
-                                      <ChevronLeft className="h-3.5 w-3.5" />
-                                    </Button>
-
-                                    <select
-                                      className="h-7 text-xs bg-background border rounded px-2 py-0 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[260px] truncate"
-                                      value={previewContactIndex}
-                                      onChange={(e) => setPreviewContactIndex(Number(e.target.value))}
-                                    >
-                                      {previewContacts.map((c, i) => (
-                                        <option key={c.id || i} value={i}>
-                                          Row #{i + 1}: {c.firstName || ''} {c.lastName || ''} ({c.email})
-                                        </option>
-                                      ))}
-                                    </select>
-
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      disabled={previewContactIndex >= previewContacts.length - 1}
-                                      onClick={() => setPreviewContactIndex(Math.min(previewContacts.length - 1, previewContactIndex + 1))}
-                                      title="Next Audience Member"
-                                    >
-                                      <ChevronRight className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
+                                  <ContactPreviewPicker
+                                    contacts={previewContacts}
+                                    selectedIndex={previewContactIndex}
+                                    onSelectIndex={setPreviewContactIndex}
+                                  />
                                 </div>
 
-                                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                  <span>Email:</span>
-                                  <code className="bg-background px-1.5 py-0.5 rounded border text-foreground font-mono">
-                                    {activeContact?.email}
-                                  </code>
-                                  {activeContact?.attributes?.companyName || activeContact?.attributes?.company ? (
-                                    <span className="ml-1 text-primary font-medium">
-                                      • {activeContact.attributes?.companyName || activeContact.attributes?.company}
+                                {activeContact?.attributes?.companyName || activeContact?.attributes?.company ? (
+                                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                    <span>Company:</span>
+                                    <span className="text-primary font-medium">
+                                      {activeContact.attributes?.companyName || activeContact.attributes?.company}
                                     </span>
-                                  ) : null}
-                                </div>
+                                  </div>
+                                ) : null}
                               </div>
                             )}
+
 
                             {/* Rendered Email Body */}
                             <div className="border rounded-lg bg-white p-6 shadow-xs max-h-[380px] overflow-y-auto">

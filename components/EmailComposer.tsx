@@ -37,7 +37,9 @@ import {
   User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import ContactPreviewPicker from '@/components/ContactPreviewPicker'
 import { renderContactPreview } from '@/lib/utils'
+
 
 interface EmailComposerProps {
   value: string
@@ -963,60 +965,19 @@ export default function EmailComposer({
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between pb-2 border-b gap-2">
               {contacts && contacts.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="font-semibold text-foreground flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded">
-                    <User className="h-3.5 w-3.5" />
-                    Member {activeContactIndex + 1} of {contacts.length}
-                  </span>
-                  
-                  {/* Pager controls */}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      disabled={activeContactIndex <= 0}
-                      onClick={() => setActiveContactIndex(Math.max(0, activeContactIndex - 1))}
-                      title="Previous Contact"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </Button>
-
-                    <select
-                      className="h-7 text-xs bg-background border rounded px-1.5 py-0 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[220px] truncate"
-                      value={activeContactIndex}
-                      onChange={(e) => setActiveContactIndex(Number(e.target.value))}
-                    >
-                      {contacts.map((c, i) => (
-                        <option key={c.id || i} value={i}>
-                          #{i + 1}: {c.firstName || ''} {c.lastName || ''} ({c.email})
-                        </option>
-                      ))}
-                    </select>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      disabled={activeContactIndex >= contacts.length - 1}
-                      onClick={() => setActiveContactIndex(Math.min(contacts.length - 1, activeContactIndex + 1))}
-                      title="Next Contact"
-                    >
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-
-                  <span className="text-muted-foreground text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded">
-                    {activeContact?.email}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <ContactPreviewPicker
+                    contacts={contacts}
+                    selectedIndex={activeContactIndex}
+                    onSelectIndex={setActiveContactIndex}
+                  />
                 </div>
               ) : (
                 <span className="text-xs text-muted-foreground">
                   Showing simulated preview with sample contact data (Alex Morgan, Acme Corp)
                 </span>
               )}
+
 
               <div className="flex items-center gap-1 bg-muted p-0.5 rounded text-xs ml-auto">
                 <button
