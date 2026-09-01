@@ -38,7 +38,10 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ContactPreviewPicker from '@/components/ContactPreviewPicker'
+import MergeTagAlert from '@/components/MergeTagAlert'
+import { extractAvailableMergeTags } from '@/lib/mergeTags'
 import { renderContactPreview } from '@/lib/utils'
+
 
 
 interface EmailComposerProps {
@@ -110,8 +113,12 @@ export default function EmailComposer({
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [lineSpacing, setLineSpacing] = useState<'normal' | 'compact' | 'relaxed'>('normal')
   
+  // Available merge tags (standard + dynamic custom audience attributes)
+  const dynamicMergeTags = React.useMemo(() => extractAvailableMergeTags(contacts), [contacts])
+
   // Real contact preview state
   const [internalContactIndex, setInternalContactIndex] = useState(0)
+
   const activeContactIndex = selectedContactIndex !== undefined ? selectedContactIndex : internalContactIndex
   const setActiveContactIndex = (idx: number) => {
     setInternalContactIndex(idx)
@@ -398,7 +405,7 @@ export default function EmailComposer({
           <span className="text-muted-foreground flex items-center gap-1 font-medium mr-1">
             <Sparkles className="h-3.5 w-3.5 text-primary" /> Insert Tag:
           </span>
-          {MERGE_TAGS.map((t) => (
+          {dynamicMergeTags.map((t) => (
             <button
               key={t.tag}
               type="button"
@@ -412,6 +419,7 @@ export default function EmailComposer({
           ))}
         </div>
       </div>
+
 
       {/* ── Main Formatting Toolbar (Gmail-Style Rich Controls) ── */}
       {activeTab === 'visual' && (
@@ -922,6 +930,21 @@ export default function EmailComposer({
 
       {/* ── Editor Body ── */}
       <div className="p-4">
+        {/* Real-Time Merge Tag / Variable Mistake Warning */}
+        {activeTab !== 'preview' && (
+          <MergeTagAlert
+            content={value}
+            contacts={contacts}
+            onFix={(fixed) => {
+              onChange(fixed)
+              if (editorRef.current) {
+                editorRef.current.innerHTML = fixed
+              }
+            }}
+            className="mb-3"
+          />
+        )}
+
         {activeTab === 'visual' && (
           <div
             ref={editorRef}
@@ -963,6 +986,7 @@ export default function EmailComposer({
             </div>
           </div>
         )}
+
 
         {activeTab === 'preview' && (
           <div className="space-y-3">

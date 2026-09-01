@@ -49,6 +49,8 @@ import {
 import EmailComposer from '@/components/EmailComposer'
 import SequenceBuilder from '@/components/SequenceBuilder'
 import ContactPreviewPicker from '@/components/ContactPreviewPicker'
+import MergeTagAlert from '@/components/MergeTagAlert'
+
 
 
 export default function NewCampaignPage() {
@@ -587,6 +589,8 @@ export default function NewCampaignPage() {
                       {/* Template Preview with Audience Member Navigator */}
                       {selectedTemplateHtml && (() => {
                         const activeContact = previewContacts.length > 0 ? (previewContacts[previewContactIndex] || previewContacts[0]) : null
+                        const activeTplSubject = selectedTemplateSubject || templates.find(t => t.id === selectedTemplateId)?.subject || subject
+
                         return (
                           <div className="space-y-3 pt-3 border-t">
                             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -597,7 +601,7 @@ export default function NewCampaignPage() {
                                 </span>
                                 {previewContacts.length > 0 ? (
                                   <span className="text-[11px] font-medium text-muted-foreground">
-                                    (Using 1st row & members from selected audience)
+                                    (Using 1st row &amp; members from selected audience)
                                   </span>
                                 ) : (
                                   <span className="text-[11px] text-muted-foreground">
@@ -636,55 +640,57 @@ export default function NewCampaignPage() {
                               </div>
                             )}
 
-                            {/* Rendered Email Envelope with Subject & Body */}
-                            {(() => {
-                              const activeTplSubject = selectedTemplateSubject || templates.find(t => t.id === selectedTemplateId)?.subject || subject
-                              return (
-                                <div className="border rounded-xl bg-card shadow-xs overflow-hidden">
-                                  {activeTplSubject && (
-                                    <div className="p-4 bg-muted/20 border-b space-y-1.5 text-xs">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-muted-foreground w-12 shrink-0">To:</span>
-                                        <span className="font-medium text-foreground truncate">
-                                          {activeContact
-                                            ? `${[activeContact.firstName, activeContact.lastName].filter(Boolean).join(' ') || 'Recipient'} <${activeContact.email}>`
-                                            : 'Alex Morgan <alex@example.com>'}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-start gap-2">
-                                        <span className="font-bold text-foreground w-12 shrink-0 mt-0.5">Subject:</span>
-                                        <span className="font-bold text-sm text-primary leading-snug">
-                                          {renderContactPreview(activeTplSubject, activeContact)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
+                            {/* Merge Tag Mistake Alert for Template */}
+                            <MergeTagAlert
+                              content={`${activeTplSubject} ${selectedTemplateHtml}`}
+                              contacts={previewContacts}
+                              compact
+                            />
 
-                                  <div className="p-6 bg-white text-zinc-900 max-h-[380px] overflow-y-auto">
-                                    <div
-                                      dangerouslySetInnerHTML={{
-                                        __html: renderContactPreview(selectedTemplateHtml, activeContact),
-                                      }}
-                                      className={`email-content-editable ${
-                                        selectedTemplateHtml.includes('line-height: 1.25') || 
-                                        selectedTemplateHtml.includes('line-height: 1.3') || 
-                                        selectedTemplateHtml.includes('margin-bottom: 4px') || 
-                                        selectedTemplateHtml.includes('spacing-compact')
-                                          ? 'spacing-compact'
-                                          : selectedTemplateHtml.includes('line-height: 2') || 
-                                            selectedTemplateHtml.includes('spacing-relaxed')
-                                          ? 'spacing-relaxed'
-                                          : 'spacing-normal'
-                                      }`}
-                                    />
+                            {/* Rendered Email Envelope with Subject & Body */}
+                            <div className="border rounded-xl bg-card shadow-xs overflow-hidden">
+                              {activeTplSubject && (
+                                <div className="p-4 bg-muted/20 border-b space-y-1.5 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-muted-foreground w-12 shrink-0">To:</span>
+                                    <span className="font-medium text-foreground truncate">
+                                      {activeContact
+                                        ? `${[activeContact.firstName, activeContact.lastName].filter(Boolean).join(' ') || 'Recipient'} <${activeContact.email}>`
+                                        : 'Alex Morgan <alex@example.com>'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <span className="font-bold text-foreground w-12 shrink-0 mt-0.5">Subject:</span>
+                                    <span className="font-bold text-sm text-primary leading-snug">
+                                      {renderContactPreview(activeTplSubject, activeContact)}
+                                    </span>
                                   </div>
                                 </div>
-                              )
-                            })()}
+                              )}
 
+                              <div className="p-6 bg-white text-zinc-900 max-h-[380px] overflow-y-auto">
+                                <div
+                                  dangerouslySetInnerHTML={{
+                                    __html: renderContactPreview(selectedTemplateHtml, activeContact),
+                                  }}
+                                  className={`email-content-editable ${
+                                    selectedTemplateHtml.includes('line-height: 1.25') || 
+                                    selectedTemplateHtml.includes('line-height: 1.3') || 
+                                    selectedTemplateHtml.includes('margin-bottom: 4px') || 
+                                    selectedTemplateHtml.includes('spacing-compact')
+                                      ? 'spacing-compact'
+                                      : selectedTemplateHtml.includes('line-height: 2') || 
+                                        selectedTemplateHtml.includes('spacing-relaxed')
+                                      ? 'spacing-relaxed'
+                                      : 'spacing-normal'
+                                  }`}
+                                />
+                              </div>
+                            </div>
                           </div>
                         )
                       })()}
+
 
                     </div>
                   )}

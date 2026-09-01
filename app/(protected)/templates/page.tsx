@@ -26,6 +26,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import EmailComposer from '@/components/EmailComposer'
+import MergeTagAlert from '@/components/MergeTagAlert'
+
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([])
@@ -325,8 +327,15 @@ export default function TemplatesPage() {
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
                       />
+                      <MergeTagAlert
+                        content={subject}
+                        onFix={(fixed) => setSubject(fixed)}
+                        compact
+                        className="mt-1"
+                      />
                     </div>
                   </div>
+
 
                   {/* Visual & Code Email Composer */}
                   <div className="space-y-1.5 pt-2">

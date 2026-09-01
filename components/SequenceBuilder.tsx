@@ -24,8 +24,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import EmailComposer from '@/components/EmailComposer'
 import ContactPreviewPicker from '@/components/ContactPreviewPicker'
+import MergeTagAlert from '@/components/MergeTagAlert'
 import { renderContactPreview } from '@/lib/utils'
 import type { SequenceStepInput, Contact } from '@/lib/types'
+
 
 interface SequenceBuilderProps {
   steps: SequenceStepInput[]
@@ -482,6 +484,16 @@ export default function SequenceBuilder({
                           placeholder="e.g. Quick question regarding {{company_name}}"
                           className="text-sm font-medium h-10"
                         />
+                        <MergeTagAlert
+                          content={initialSubject}
+                          contacts={contacts}
+                          onFix={(fixed) => {
+                            onInitialSubjectChange(fixed)
+                            updateStep(0, { subject: fixed })
+                          }}
+                          compact
+                          className="mt-1.5"
+                        />
                       </div>
                     ) : (
                       /* Step 2..N: Threading Option or Custom Subject */
@@ -520,10 +532,18 @@ export default function SequenceBuilder({
                               placeholder="e.g. Following up on my previous note"
                               className="text-xs h-9"
                             />
+                            <MergeTagAlert
+                              content={step.subject || ''}
+                              contacts={contacts}
+                              onFix={(fixed) => updateStep(idx, { subject: fixed })}
+                              compact
+                              className="mt-1"
+                            />
                           </div>
                         )}
                       </div>
                     )}
+
 
                     {/* Visual Email Composer for this step */}
                     <div className="space-y-1.5">
