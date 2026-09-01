@@ -117,17 +117,20 @@ export const updateCampaign = (
   id: string,
   body: Partial<{
     name: string
+    audienceId: string
     subject: string
     fromName: string
     fromEmail: string
     replyTo: string
     htmlBody: string
     templateId: string
+    isSequence: boolean
     trackOpens: boolean
     trackClicks: boolean
     steps: SequenceStepInput[]
   }>,
 ) => req<Campaign>(`/campaigns/${id}`, { method: "PATCH", body: JSON.stringify(body) })
+
 
 
 export const markLeadReplied = (campaignId: string, leadId: string) =>

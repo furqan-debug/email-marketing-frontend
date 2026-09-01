@@ -13,8 +13,10 @@ import {
   Eye, 
   MousePointerClick, 
   BarChart3,
-  Clock
+  Clock,
+  Edit3
 } from 'lucide-react'
+
 import { getCampaigns, deleteCampaign } from '@/lib/api'
 import type { Campaign } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -179,7 +181,7 @@ export default function CampaignsPage() {
                       key={c.id} 
                       className="cursor-pointer hover:bg-muted/60 transition-colors"
                       onClick={() => {
-                        window.location.href = `/campaigns/${c.id}`
+                        window.location.href = c.status === 'DRAFT' ? `/campaigns/${c.id}/edit` : `/campaigns/${c.id}`
                       }}
                     >
                       <TableCell className="font-medium">
@@ -220,17 +222,27 @@ export default function CampaignsPage() {
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/campaigns/${c.id}`}>
-                              Analytics
-                              <ChevronRight className="ml-1 h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
+                          {c.status === 'DRAFT' ? (
+                            <Button variant="outline" size="sm" asChild className="h-8 text-xs font-semibold bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100">
+                              <Link href={`/campaigns/${c.id}/edit`}>
+                                <Edit3 className="mr-1 h-3.5 w-3.5 text-amber-700" />
+                                Edit Draft
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link href={`/campaigns/${c.id}`}>
+                                Analytics
+                                <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                              </Link>
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             disabled={deletingId === c.id}
+
                             onClick={(e) => handleDelete(c.id, c.name, e)}
                             title="Delete campaign"
                           >

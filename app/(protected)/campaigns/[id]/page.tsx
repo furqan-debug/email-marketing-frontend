@@ -328,11 +328,13 @@ export default function CampaignDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={actionLoading}
-                onClick={() => handleAction('generate')}
-                className="h-8 text-xs font-medium"
+                asChild
+                className="h-8 text-xs font-semibold bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
               >
-                Pre-Generate
+                <Link href={`/campaigns/${id}/edit`}>
+                  <Edit3 className="h-3.5 w-3.5 mr-1.5 text-amber-700" />
+                  Edit Campaign
+                </Link>
               </Button>
               <Button
                 size="sm"
@@ -344,6 +346,20 @@ export default function CampaignDetailPage() {
                 Start Send
               </Button>
             </>
+          )}
+
+          {displayStatus !== 'DRAFT' && (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="h-8 text-xs font-medium"
+            >
+              <Link href={`/campaigns/${id}/edit`}>
+                <Edit3 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                Edit Campaign
+              </Link>
+            </Button>
           )}
 
           {displayStatus === 'SENDING' && (
@@ -370,6 +386,7 @@ export default function CampaignDetailPage() {
               </Button>
             </>
           )}
+
 
           {displayStatus === 'PAUSED' && (
             <>
@@ -443,7 +460,42 @@ export default function CampaignDetailPage() {
         </Alert>
       )}
 
+      {/* Draft Notification & Resume Banner */}
+      {displayStatus === 'DRAFT' && (
+        <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
+              <Edit3 className="h-5 w-5 text-amber-800" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-950">This Campaign is Saved as a Draft</p>
+              <p className="text-xs text-amber-800">
+                You can edit target audience, sender info, email copy, or configure follow-ups anytime before launch.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <Button size="sm" asChild className="bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold shadow-xs">
+              <Link href={`/campaigns/${id}/edit`}>
+                <Edit3 className="h-3.5 w-3.5 mr-1.5" />
+                Resume &amp; Edit Campaign
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              disabled={actionLoading}
+              onClick={() => handleAction('send')}
+              className="bg-primary hover:bg-primary/90 text-xs font-bold shadow-xs"
+            >
+              <Play className="h-3.5 w-3.5 mr-1.5 fill-current" />
+              Send Now
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Unified Performance Panel */}
+
       <Card className="rounded-xl border shadow-xs bg-card overflow-hidden">
         {/* Performance Header & Conversion Strip */}
         <div className="p-5 pb-4 border-b space-y-4">
