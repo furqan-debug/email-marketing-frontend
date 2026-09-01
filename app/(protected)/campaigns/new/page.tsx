@@ -79,7 +79,7 @@ export default function NewCampaignPage() {
 
 
 
-  // Multi-step follow-up sequence steps
+  // Multi-step follow-up sequence steps (Defaults to only Step 1; Follow-ups added on click)
   const [sequenceSteps, setSequenceSteps] = useState<SequenceStepInput[]>([
     {
       stepOrder: 1,
@@ -88,14 +88,8 @@ export default function NewCampaignPage() {
       subject: '',
       htmlBody: '',
     },
-    {
-      stepOrder: 2,
-      delayHours: 48,
-      sendAsReply: true,
-      subject: '',
-      htmlBody: '',
-    },
   ])
+
 
   // Audience contacts for live preview
   const [previewContacts, setPreviewContacts] = useState<Contact[]>([])
@@ -229,12 +223,21 @@ export default function NewCampaignPage() {
         isSequence: contentMode === 'sequence',
         trackOpens,
         trackClicks,
-        steps: contentMode === 'sequence' ? sequenceSteps.map((s, idx) => ({
-          ...s,
-          stepOrder: idx + 1,
-          subject: idx === 0 ? (s.subject || subject).trim() : s.subject?.trim(),
-        })) : undefined,
+        steps: contentMode === 'sequence' 
+          ? sequenceSteps
+              .filter((s, idx) => {
+                if (idx === 0) return true
+                const plainText = (s.htmlBody || '').replace(/<[^>]*>/g, '').trim()
+                return plainText.length > 0 || (s.htmlBody && s.htmlBody.trim().length > 0)
+              })
+              .map((s, idx) => ({
+                ...s,
+                stepOrder: idx + 1,
+                subject: idx === 0 ? (s.subject || subject).trim() : s.subject?.trim(),
+              })) 
+          : undefined,
       }
+
 
 
       const campaign = await createCampaign(campaignPayload)
