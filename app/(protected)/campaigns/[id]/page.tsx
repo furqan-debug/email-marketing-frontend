@@ -282,6 +282,13 @@ export default function CampaignDetailPage() {
   const replyRate = delivered > 0 ? (replied / delivered) : (sent > 0 ? replied / sent : 0)
   const unsubRate = delivered > 0 ? (unsubscribed / delivered) : (sent > 0 ? unsubscribed / sent : 0)
   const bounceRate = sent > 0 ? (bounced / sent) : 0
+  const isSequenceFinished = !!(
+    sequenceProgress &&
+    sequenceProgress.totalLeads > 0 &&
+    (sequenceProgress.statusCounts.ACTIVE || 0) === 0 &&
+    (sequenceProgress.statusCounts.WAITING_DELAY || 0) === 0
+  )
+  const displayStatus = isSequenceFinished ? 'COMPLETED' : campaign.status
 
   return (
     <div className="space-y-6 max-w-5xl pb-16">
@@ -296,7 +303,7 @@ export default function CampaignDetailPage() {
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-xl font-bold tracking-tight text-foreground">{campaign.name}</h1>
-              {getStatusBadge(campaign.status)}
+              {getStatusBadge(displayStatus)}
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap font-medium">
               <span className="text-foreground truncate max-w-[260px] flex items-center gap-1">
@@ -316,7 +323,7 @@ export default function CampaignDetailPage() {
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 flex-wrap">
-          {campaign.status === 'DRAFT' && (
+          {displayStatus === 'DRAFT' && (
             <>
               <Button
                 variant="outline"
@@ -339,7 +346,7 @@ export default function CampaignDetailPage() {
             </>
           )}
 
-          {campaign.status === 'SENDING' && (
+          {displayStatus === 'SENDING' && (
             <>
               <Button
                 variant="outline"
@@ -364,7 +371,7 @@ export default function CampaignDetailPage() {
             </>
           )}
 
-          {campaign.status === 'PAUSED' && (
+          {displayStatus === 'PAUSED' && (
             <>
               <Button
                 size="sm"
@@ -373,7 +380,7 @@ export default function CampaignDetailPage() {
                 className="h-8 text-xs font-semibold bg-primary hover:bg-primary/90"
               >
                 <Play className="h-3.5 w-3.5 mr-1.5 fill-current" />
-                Resume
+                Resume Send
               </Button>
               <Button
                 variant="destructive"
