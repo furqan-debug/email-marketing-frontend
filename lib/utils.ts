@@ -31,32 +31,56 @@ export function renderContactPreview(rawHtml: string, contact?: any | null): str
 
   return preview.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, rawKey: string) => {
     const key = rawKey.toLowerCase()
-    if (key === 'first_name' || key === 'firstname') {
+    const cleanKey = key.replace(/[^a-z0-9]/g, '')
+
+    if (['first_name', 'firstname', 'fname', 'first', 'first-name', 'f_name'].includes(key) || cleanKey === 'firstname' || cleanKey === 'fname') {
       return contact.firstName || ''
     }
-    if (key === 'last_name' || key === 'lastname') {
+    if (['last_name', 'lastname', 'lname', 'last', 'last-name', 'l_name'].includes(key) || cleanKey === 'lastname' || cleanKey === 'lname') {
       return contact.lastName || ''
     }
-    if (key === 'email') {
+    if (['email', 'email_address', 'mail', 'emailaddress', 'e-mail'].includes(key) || cleanKey === 'email') {
       return contact.email || ''
     }
-    if (key === 'unsubscribe' || key === 'unsubscribe_url') {
-      return '#unsubscribe'
+
+    if (attrs[rawKey] !== undefined && attrs[rawKey] !== null && String(attrs[rawKey]).trim() !== '') return String(attrs[rawKey])
+    if (attrs[key] !== undefined && attrs[key] !== null && String(attrs[key]).trim() !== '') return String(attrs[key])
+
+    const TITLE_ALIASES = ['title', 'job_title', 'jobtitle', 'job-title', 'job', 'role', 'position', 'designation', 'occupation']
+    if (TITLE_ALIASES.includes(key) || TITLE_ALIASES.map(a => a.replace(/[^a-z0-9]/g, '')).includes(cleanKey)) {
+      for (const alias of ['title', 'job_title', 'jobTitle', 'jobtitle', 'job-title', 'role', 'position', 'designation', 'job', 'occupation']) {
+        if (attrs[alias] !== undefined && attrs[alias] !== null && String(attrs[alias]).trim() !== '') {
+          return String(attrs[alias])
+        }
+      }
+      const matchedTitleKey = Object.keys(attrs).find(k => {
+        const kClean = k.toLowerCase().replace(/[^a-z0-9]/g, '')
+        return ['title', 'jobtitle', 'job', 'role', 'position', 'designation'].includes(kClean)
+      })
+      if (matchedTitleKey && attrs[matchedTitleKey] !== undefined && attrs[matchedTitleKey] !== null) {
+        return String(attrs[matchedTitleKey])
+      }
     }
 
-    if (attrs[rawKey] !== undefined && attrs[rawKey] !== null) return String(attrs[rawKey])
-    if (attrs[key] !== undefined && attrs[key] !== null) return String(attrs[key])
-
-    if (key === 'company_name' || key === 'company') {
-      return attrs.companyName || attrs.company_name || attrs.company || ''
-    }
-    if (key === 'title' || key === 'job_title' || key === 'jobtitle') {
-      return attrs.title || attrs.jobTitle || attrs.job_title || ''
+    const COMPANY_ALIASES = ['company_name', 'company', 'companyname', 'company-name', 'organization', 'org', 'business', 'business_name', 'comp_name', 'compnay', 'compny']
+    if (COMPANY_ALIASES.includes(key) || COMPANY_ALIASES.map(a => a.replace(/[^a-z0-9]/g, '')).includes(cleanKey)) {
+      for (const alias of ['company_name', 'companyName', 'company', 'companyname', 'organization', 'org', 'business', 'business_name', 'comp_name']) {
+        if (attrs[alias] !== undefined && attrs[alias] !== null && String(attrs[alias]).trim() !== '') {
+          return String(attrs[alias])
+        }
+      }
+      const matchedCompKey = Object.keys(attrs).find(k => {
+        const kClean = k.toLowerCase().replace(/[^a-z0-9]/g, '')
+        return ['companyname', 'company', 'organization', 'org', 'business', 'businessname'].includes(kClean)
+      })
+      if (matchedCompKey && attrs[matchedCompKey] !== undefined && attrs[matchedCompKey] !== null) {
+        return String(attrs[matchedCompKey])
+      }
     }
 
     const noUnder = key.replace(/_/g, '')
-    const found = Object.keys(attrs).find(k => k.toLowerCase().replace(/_/g, '') === noUnder)
-    if (found && attrs[found] !== undefined && attrs[found] !== null) {
+    const found = Object.keys(attrs).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === noUnder)
+    if (found && attrs[found] !== undefined && attrs[found] !== null && String(attrs[found]).trim() !== '') {
       return String(attrs[found])
     }
 
