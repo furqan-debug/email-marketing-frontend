@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Merge Tag & Variable Validation Engine
  * Detects invalid variables, typos, malformed syntax (single braces, unclosed tags),
  * and provides intelligent suggestions based on standard fields and audience attributes.
@@ -17,8 +17,8 @@ export const STANDARD_MERGE_TAGS: MergeTagDefinition[] = [
   { key: 'company_name', label: 'Company Name', tag: '{{company_name}}', aliases: ['company', 'companyname', 'company-name', 'compnay', 'compny', 'organization', 'org', 'business', 'business_name', 'comp_name'] },
   { key: 'title', label: 'Job Title', tag: '{{title}}', aliases: ['job_title', 'jobtitle', 'job-title', 'role', 'position', 'designation', 'designtion', 'job', 'occupation'] },
   { key: 'email', label: 'Email Address', tag: '{{email}}', aliases: ['email_address', 'mail', 'emailaddress', 'emai', 'e-mail'] },
-  { key: 'unsubscribe', label: 'Unsubscribe Link', tag: '{{unsubscribe}}', aliases: ['unsubscribe_url', 'optout', 'unsub', 'unsub_link', 'unsubscribe-link'] },
 ]
+
 
 export interface MergeTagIssue {
   id: string
