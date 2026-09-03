@@ -1,12 +1,14 @@
 export interface Workspace {
   id: string
   name: string
+  createdAt?: string
 }
 
 export interface Audience {
   id: string
   name: string
   workspaceId: string
+  createdAt?: string
   _count?: { contacts: number; campaigns: number }
 }
 
@@ -17,6 +19,7 @@ export interface Contact {
   lastName?: string | null
   attributes?: Record<string, any> | null
   audienceId: string
+  createdAt?: string
 }
 
 export interface ColumnMapping {
@@ -39,7 +42,9 @@ export interface Template {
   name: string
   subject?: string | null
   html?: string
+  createdAt?: string
 }
+
 
 export interface CampaignStep {
   id: string
@@ -112,7 +117,7 @@ export interface Campaign {
   trackOpens?: boolean
   trackClicks?: boolean
   audienceId: string
-
+  createdAt?: string
   subject?: string | null
   fromName?: string | null
   fromEmail?: string | null
@@ -123,6 +128,7 @@ export interface Campaign {
   snapshot?: AnalyticsSnapshot | null
   _count?: { leads?: number; messages?: number }
 }
+
 
 
 export interface AnalyticsRates {
