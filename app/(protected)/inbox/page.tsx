@@ -549,9 +549,27 @@ export default function InboxPage() {
                       </div>
                     )}
 
-                    {/* Messages in chronological order */}
-                    {selectedThread.messages && selectedThread.messages.length > 0 ? (
-                      selectedThread.messages.map((msg: any, idx: number) => {
+                    {/* Messages in chronological order (deduplicated) */}
+                    {(() => {
+                      const msgs = selectedThread.messages || []
+                      const seen = new Set<string>()
+                      const uniqueMsgs = msgs.filter((msg: any) => {
+                        const cleaned = cleanEmailBody(msg.body).cleanText.trim()
+                        const key = `${msg.direction}_${cleaned}`
+                        if (seen.has(key)) return false
+                        seen.add(key)
+                        return true
+                      })
+
+                      if (uniqueMsgs.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-xs text-muted-foreground">
+                            No messages found in this thread.
+                          </div>
+                        )
+                      }
+
+                      return uniqueMsgs.map((msg: any, idx: number) => {
                         const isInbound = msg.direction === "inbound"
                         const msgId = msg.id || String(idx)
                         
@@ -567,6 +585,7 @@ export default function InboxPage() {
                               isInbound ? "mr-auto" : "ml-auto items-end"
                             }`}
                           >
+
                             {/* Sender Info Line */}
                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1 px-1">
                               {isInbound ? (
@@ -626,13 +645,10 @@ export default function InboxPage() {
                           </div>
                         )
                       })
-                    ) : (
-                      <div className="text-center py-8 text-xs text-muted-foreground">
-                        No messages found in this thread.
-                      </div>
-                    )}
+                    })()}
 
                     <div ref={messagesEndRef} />
+
                   </>
                 )}
               </div>
