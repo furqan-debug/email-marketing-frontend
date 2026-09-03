@@ -178,8 +178,15 @@ export const getInboxThread = (id: string) => req<InboxThread>(`/inbox/${id}`)
 export const markInboxRead = (id: string) =>
   req<{ id: string; status: string }>(`/inbox/${id}/read`, { method: "POST" })
 
+export const markInboxUnread = (id: string) =>
+  req<{ id: string; status: string }>(`/inbox/${id}/unread`, { method: "POST" })
+
 export const archiveInboxThread = (id: string) =>
   req<{ id: string; status: string }>(`/inbox/${id}/archive`, { method: "POST" })
+
+export const unarchiveInboxThread = (id: string) =>
+  req<{ id: string; status: string }>(`/inbox/${id}/unarchive`, { method: "POST" })
+
 
 export const sendInboxReply = (id: string, body: string) =>
   req<{ ok: boolean; messageId?: string }>(`/inbox/${id}/reply`, {

@@ -9,6 +9,7 @@ import {
   Mail, 
   Search, 
   Archive, 
+  ArchiveRestore,
   Clock, 
   User, 
   ExternalLink,
@@ -27,11 +28,14 @@ import {
   getInboxThreads, 
   getInboxThread, 
   markInboxRead, 
+  markInboxUnread,
   archiveInboxThread, 
+  unarchiveInboxThread,
   sendInboxReply, 
   getInboxStats, 
   syncImapInboxes 
 } from "@/lib/api"
+
 import { cleanEmailBody } from "@/lib/email-cleaner"
 import type { InboxThread, InboxStats, InboxMessage } from "@/lib/types"
 import { Button } from "@/components/ui/button"
@@ -169,15 +173,56 @@ export default function InboxPage() {
   const handleArchiveThread = async (id: string) => {
     try {
       await archiveInboxThread(id)
-      setThreads(prev => prev.filter(t => t.id !== id))
-      if (selectedThread?.id === id) {
-        setSelectedThread(null)
+      if (statusFilter !== "all" && statusFilter !== "archived") {
+        setThreads(prev => prev.filter(t => t.id !== id))
+        if (selectedThread?.id === id) {
+          setSelectedThread(null)
+        }
+      } else {
+        setThreads(prev => prev.map(t => t.id === id ? { ...t, status: "archived" } : t))
+        if (selectedThread?.id === id) {
+          setSelectedThread((prev: any) => prev ? { ...prev, status: "archived" } : null)
+        }
       }
       setStats(prev => prev ? { ...prev, archived: prev.archived + 1 } : null)
     } catch (err: any) {
       alert("Failed to archive thread: " + err.message)
     }
   }
+
+  const handleUnarchiveThread = async (id: string) => {
+    try {
+      await unarchiveInboxThread(id)
+      if (statusFilter === "archived") {
+        setThreads(prev => prev.filter(t => t.id !== id))
+        if (selectedThread?.id === id) {
+          setSelectedThread(null)
+        }
+      } else {
+        setThreads(prev => prev.map(t => t.id === id ? { ...t, status: "read" } : t))
+        if (selectedThread?.id === id) {
+          setSelectedThread((prev: any) => prev ? { ...prev, status: "read" } : null)
+        }
+      }
+      setStats(prev => prev ? { ...prev, archived: Math.max(0, prev.archived - 1) } : null)
+    } catch (err: any) {
+      alert("Failed to unarchive thread: " + err.message)
+    }
+  }
+
+  const handleMarkUnread = async (id: string) => {
+    try {
+      await markInboxUnread(id)
+      setThreads(prev => prev.map(t => t.id === id ? { ...t, status: "unread" } : t))
+      if (selectedThread?.id === id) {
+        setSelectedThread((prev: any) => prev ? { ...prev, status: "unread" } : null)
+      }
+      setStats(prev => prev ? { ...prev, unread: prev.unread + 1 } : null)
+    } catch (err: any) {
+      alert("Failed to mark unread: " + err.message)
+    }
+  }
+
 
   const handleSendReply = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -497,16 +542,43 @@ export default function InboxPage() {
 
                 {/* Header Action Buttons */}
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleArchiveThread(selectedThread.id)}
-                    className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1"
-                  >
-                    <Archive className="h-3.5 w-3.5" />
-                    <span>Archive</span>
-                  </Button>
+                  {selectedThread.status === "archived" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUnarchiveThread(selectedThread.id)}
+                      className="h-8 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/10 gap-1.5 shadow-xs"
+                    >
+                      <ArchiveRestore className="h-3.5 w-3.5" />
+                      <span>Move to Inbox</span>
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMarkUnread(selectedThread.id)}
+                        className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                        title="Mark conversation as unread"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Mark Unread</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleArchiveThread(selectedThread.id)}
+                        className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                        title="Archive conversation"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                        <span>Archive</span>
+                      </Button>
+                    </>
+                  )}
                 </div>
+
               </div>
 
               {/* Message Feed Stream */}
