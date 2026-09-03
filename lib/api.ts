@@ -145,4 +145,25 @@ export const computeAnalytics = (id: string) =>
 export const getCampaignActivity = (id: string) =>
   req<ActivityEvent[]>(`/analytics/campaigns/${id}/activity`)
 
+// ── IMAP Mailbox Sync ────────────────────────────────────────────────────────
+export const syncImapInboxes = () => req<{
+  status: string
+  accountsConfigured: number
+  syncedInboxes: number
+  totalEmailsScanned: number
+  matchedReplies: number
+  lastSyncedAt: string | null
+  errors: string[]
+  message?: string
+}>("/imap/sync", { method: "POST" })
+
+export const getImapStatus = () => req<{
+  configured: boolean
+  accountsCount: number
+  accounts: Array<{ user: string; host: string; port: number }>
+  isSyncing: boolean
+  lastSyncedAt: string | null
+}>("/imap/status")
+
+
 

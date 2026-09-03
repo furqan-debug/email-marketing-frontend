@@ -25,7 +25,8 @@ import {
   ExternalLink,
   Edit3,
   Save,
-  Clock
+  Clock,
+  Inbox
 } from 'lucide-react'
 import { 
   getCampaign, 
@@ -39,8 +40,10 @@ import {
   generateMessages,
   getSequenceProgress,
   markLeadReplied,
-  getCampaignActivity
+  getCampaignActivity,
+  syncImapInboxes
 } from '@/lib/api'
+
 
 
 import type { Campaign, AnalyticsSnapshot, SequenceProgress, ActivityEvent } from '@/lib/types'
@@ -150,6 +153,37 @@ export default function CampaignDetailPage() {
     }
   }
 
+  const [syncingInbox, setSyncingInbox] = useState(false)
+
+  async function handleSyncInbox() {
+    setSyncingInbox(true)
+    setActionMessage(null)
+    try {
+      const res = await syncImapInboxes()
+      if (res.status === 'no_accounts_configured') {
+        setActionMessage({
+          type: 'error',
+          text: 'No IMAP inboxes configured. Add IMAP_USER and IMAP_PASSWORD in Railway variables.',
+        })
+      } else if (res.status === 'ok') {
+        setActionMessage({
+          type: 'success',
+          text: `Mailbox synced! Scanned ${res.totalEmailsScanned} emails across ${res.syncedInboxes} inbox(es) — matched ${res.matchedReplies} new reply(ies).`,
+        })
+      } else {
+        setActionMessage({
+          type: 'success',
+          text: `Mailbox sync completed (${res.status}).`,
+        })
+      }
+      await loadData()
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.message || 'Failed to sync IMAP mailbox' })
+    } finally {
+      setSyncingInbox(false)
+    }
+  }
+
   async function handleMarkReplied(leadId: string) {
     setActionLoading(true)
     try {
@@ -162,6 +196,7 @@ export default function CampaignDetailPage() {
       setActionLoading(false)
     }
   }
+
 
   // Edit Sequence State & Handlers
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -443,13 +478,25 @@ export default function CampaignDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={actionLoading}
+            disabled={actionLoading || syncingInbox}
+            onClick={handleSyncInbox}
+            className="h-8 text-xs font-semibold bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
+          >
+            <Inbox className={`h-3.5 w-3.5 mr-1.5 text-blue-600 ${syncingInbox ? 'animate-spin' : ''}`} />
+            {syncingInbox ? 'Syncing Inbox...' : 'Sync Inbox Replies'}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={actionLoading || syncingInbox}
             onClick={handleRefreshAnalytics}
             className="h-8 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${actionLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+
 
         </div>
       </div>
