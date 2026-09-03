@@ -2,8 +2,9 @@ import type {
   Workspace, Audience, Contact, PaginatedContacts,
   Template, Campaign, AnalyticsSnapshot, ImportResult,
   ColumnMapping, CampaignStep, SequenceStepInput, SequenceProgress,
-  ActivityEvent,
+  ActivityEvent, InboxThread, InboxStats, PaginatedInbox,
 } from "./types"
+
 
 
 
@@ -164,6 +165,30 @@ export const getImapStatus = () => req<{
   isSyncing: boolean
   lastSyncedAt: string | null
 }>("/imap/status")
+
+// ── Inbox ────────────────────────────────────────────────────────────────────
+export const getInboxThreads = (page = 1, limit = 30, status?: string) => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (status && status !== 'all') params.append('status', status)
+  return req<PaginatedInbox>(`/inbox?${params.toString()}`)
+}
+
+export const getInboxThread = (id: string) => req<InboxThread>(`/inbox/${id}`)
+
+export const markInboxRead = (id: string) =>
+  req<{ id: string; status: string }>(`/inbox/${id}/read`, { method: "POST" })
+
+export const archiveInboxThread = (id: string) =>
+  req<{ id: string; status: string }>(`/inbox/${id}/archive`, { method: "POST" })
+
+export const sendInboxReply = (id: string, body: string) =>
+  req<{ ok: boolean; messageId?: string }>(`/inbox/${id}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  })
+
+export const getInboxStats = () => req<InboxStats>("/inbox/stats")
+
 
 
 

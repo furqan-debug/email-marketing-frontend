@@ -1,7 +1,8 @@
-﻿'use client'
+'use client'
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,10 +10,12 @@ import {
   Send, 
   LogOut,
   Mail,
-  ChevronRight
+  ChevronRight,
+  Inbox
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { getInboxStats } from "@/lib/api"
 
 const navItems = [
   {
@@ -35,11 +38,30 @@ const navItems = [
     href: "/campaigns",
     icon: Send,
   },
+  {
+    title: "Inbox",
+    href: "/inbox",
+    icon: Inbox,
+  },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    // Load unread count on mount and refresh every 60 seconds
+    const load = async () => {
+      try {
+        const stats = await getInboxStats()
+        setUnreadCount(stats.unread ?? 0)
+      } catch { /* ignore */ }
+    }
+    load()
+    const interval = setInterval(load, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   async function handleLogout() {
     try {
@@ -73,6 +95,7 @@ export default function Sidebar() {
             ? pathname === "/" 
             : pathname.startsWith(item.href)
           const Icon = item.icon
+          const isInbox = item.href === "/inbox"
 
           return (
             <Link
@@ -87,6 +110,11 @@ export default function Sidebar() {
             >
               <Icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-105", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
               <span className="flex-1">{item.title}</span>
+              {isInbox && unreadCount > 0 && !isActive && (
+                <span className="ml-auto inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
               {isActive && <ChevronRight className="h-4 w-4 opacity-70" />}
             </Link>
           )
@@ -108,3 +136,4 @@ export default function Sidebar() {
     </aside>
   )
 }
+

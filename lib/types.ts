@@ -178,3 +178,53 @@ export interface ImportResult {
   errorDetails: string[]
 }
 
+export interface InboxMessage {
+  id: string
+  threadId: string
+  direction: 'inbound' | 'outbound'
+  fromEmail: string
+  toEmail: string
+  subject?: string | null
+  body: string
+  sentAt: string
+}
+
+export interface InboxThread {
+  id: string
+  campaignId: string
+  contactId: string
+  contactEmail: string
+  contactName?: string | null
+  subject?: string | null
+  status: 'unread' | 'read' | 'replied' | 'archived'
+  createdAt: string
+  updatedAt: string
+  campaign?: {
+    id: string
+    name: string
+    fromEmail?: string | null
+    fromName?: string | null
+    subject?: string | null
+    htmlBody?: string | null
+  }
+  contact?: Contact
+  messages?: InboxMessage[]
+}
+
+export interface InboxStats {
+  total: number
+  unread: number
+  replied: number
+  archived: number
+}
+
+export interface PaginatedInbox {
+  data: InboxThread[]
+  total: number
+  page: number
+  limit: number
+  pages: number
+  unreadCount: number
+}
+
+

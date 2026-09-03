@@ -486,6 +486,18 @@ export default function CampaignDetailPage() {
             {syncingInbox ? 'Syncing Inbox...' : 'Sync Inbox Replies'}
           </Button>
 
+          <Link href="/inbox">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-semibold bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+            >
+              <Inbox className="h-3.5 w-3.5 mr-1.5" />
+              Open Inbox
+            </Button>
+          </Link>
+
+
           <Button
             variant="outline"
             size="sm"
