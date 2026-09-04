@@ -257,20 +257,27 @@ export default function InboxPage() {
     setExpandedQuotes(prev => ({ ...prev, [msgId]: !prev[msgId] }))
   }
 
-  const filteredThreads = threads.filter(t => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    return (
-      t.contactEmail?.toLowerCase().includes(q) ||
-      t.contactName?.toLowerCase().includes(q) ||
-      t.subject?.toLowerCase().includes(q) ||
-      t.campaign?.name?.toLowerCase().includes(q)
-    )
-  })
+  const filteredThreads = threads
+    .filter(t => {
+      if (!searchQuery) return true
+      const q = searchQuery.toLowerCase()
+      return (
+        t.contactEmail?.toLowerCase().includes(q) ||
+        t.contactName?.toLowerCase().includes(q) ||
+        t.subject?.toLowerCase().includes(q) ||
+        t.campaign?.name?.toLowerCase().includes(q)
+      )
+    })
+    .sort((a, b) => {
+      const timeA = new Date((a as any).lastActivityAt || a.updatedAt).getTime()
+      const timeB = new Date((b as any).lastActivityAt || b.updatedAt).getTime()
+      return timeB - timeA
+    })
 
   const formatTime = (dateStr: string) => {
     try {
       const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return dateStr
       const now = new Date()
       const diffMs = now.getTime() - d.getTime()
       const diffMins = Math.floor(diffMs / 60000)
@@ -282,11 +289,18 @@ export default function InboxPage() {
       if (diffHours < 24) return `${diffHours}h ago`
       if (diffDays === 1) return "yesterday"
       if (diffDays < 7) return `${diffDays}d ago`
-      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+      
+      const isSameYear = d.getFullYear() === now.getFullYear()
+      return d.toLocaleDateString(undefined, { 
+        month: "short", 
+        day: "numeric",
+        year: isSameYear ? undefined : "numeric"
+      })
     } catch {
       return dateStr
     }
   }
+
 
   return (
     <div className="space-y-4">
@@ -454,8 +468,9 @@ export default function InboxPage() {
                           </span>
                         </div>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
-                          {formatTime(thread.updatedAt)}
+                          {formatTime((thread as any).lastActivityAt || thread.updatedAt)}
                         </span>
+
                       </div>
 
                       {/* Subject */}
