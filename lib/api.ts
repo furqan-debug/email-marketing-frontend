@@ -1,6 +1,7 @@
 import type {
   Workspace, Audience, Contact, PaginatedContacts,
   Suppression, PaginatedSuppressions,
+  Unsubscriber, PaginatedUnsubscribers,
   Template, Campaign, AnalyticsSnapshot, ImportResult,
   ColumnMapping, CampaignStep, SequenceStepInput, SequenceProgress,
   ActivityEvent, InboxThread, InboxStats, PaginatedInbox,
@@ -94,6 +95,14 @@ export const removeSuppression = (workspaceId: string, email: string) =>
     method: 'DELETE',
     body: JSON.stringify({ workspaceId, email: email.trim().toLowerCase() }),
   })
+
+export const getUnsubscribers = (workspaceId?: string, campaignId?: string, search?: string, page = 1, limit = 50) => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (workspaceId) params.append('workspaceId', workspaceId)
+  if (campaignId) params.append('campaignId', campaignId)
+  if (search && search.trim()) params.append('search', search.trim())
+  return req<PaginatedUnsubscribers>(`/contacts/unsubscribers?${params.toString()}`)
+}
 
 // ── Templates ────────────────────────────────────────────────────────────────
 export const getTemplates = () => req<Template[]>("/templates")

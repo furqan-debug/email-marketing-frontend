@@ -56,6 +56,28 @@ export interface PaginatedSuppressions {
   pages: number
 }
 
+export interface Unsubscriber {
+  id: string
+  email: string
+  name?: string | null
+  campaignId: string
+  campaignName: string
+  audienceName?: string | null
+  workspaceId?: string | null
+  workspaceName?: string | null
+  country?: string | null
+  unsubscribedAt: string
+  method: string
+}
+
+export interface PaginatedUnsubscribers {
+  data: Unsubscriber[]
+  total: number
+  page: number
+  limit: number
+  pages: number
+}
+
 export interface Template {
   id: string
   name: string

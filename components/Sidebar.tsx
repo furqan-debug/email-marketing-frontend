@@ -12,7 +12,8 @@ import {
   Mail,
   ChevronRight,
   Inbox,
-  ShieldAlert
+  ShieldAlert,
+  UserX
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,11 @@ const navItems = [
     title: "Suppression",
     href: "/suppressions",
     icon: ShieldAlert,
+  },
+  {
+    title: "Unsubscribers",
+    href: "/unsubscribers",
+    icon: UserX,
   },
   {
     title: "Templates",
