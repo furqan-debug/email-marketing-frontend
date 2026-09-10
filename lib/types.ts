@@ -37,6 +37,25 @@ export interface PaginatedContacts {
   pages: number
 }
 
+export interface Suppression {
+  id: string
+  workspaceId: string
+  email: string
+  createdAt: string
+  workspace?: {
+    id: string
+    name: string
+  }
+}
+
+export interface PaginatedSuppressions {
+  data: Suppression[]
+  total: number
+  page: number
+  limit: number
+  pages: number
+}
+
 export interface Template {
   id: string
   name: string

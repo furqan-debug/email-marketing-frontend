@@ -1,5 +1,6 @@
 import type {
   Workspace, Audience, Contact, PaginatedContacts,
+  Suppression, PaginatedSuppressions,
   Template, Campaign, AnalyticsSnapshot, ImportResult,
   ColumnMapping, CampaignStep, SequenceStepInput, SequenceProgress,
   ActivityEvent, InboxThread, InboxStats, PaginatedInbox,
@@ -73,6 +74,26 @@ export const importCsv = async (
   }
   return res.json() as Promise<ImportResult>
 }
+
+// ── Suppressions ─────────────────────────────────────────────────────────────
+export const getSuppressions = (workspaceId?: string, search?: string, page = 1, limit = 50) => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (workspaceId) params.append('workspaceId', workspaceId)
+  if (search && search.trim()) params.append('search', search.trim())
+  return req<PaginatedSuppressions>(`/contacts/suppressions?${params.toString()}`)
+}
+
+export const addSuppression = (workspaceId: string, email: string) =>
+  req<{ status: string }>('/contacts/suppress', {
+    method: 'POST',
+    body: JSON.stringify({ workspaceId, email: email.trim().toLowerCase() }),
+  })
+
+export const removeSuppression = (workspaceId: string, email: string) =>
+  req<{ status: string }>('/contacts/suppress', {
+    method: 'DELETE',
+    body: JSON.stringify({ workspaceId, email: email.trim().toLowerCase() }),
+  })
 
 // ── Templates ────────────────────────────────────────────────────────────────
 export const getTemplates = () => req<Template[]>("/templates")

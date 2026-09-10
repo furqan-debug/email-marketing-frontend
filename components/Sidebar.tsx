@@ -11,7 +11,8 @@ import {
   LogOut,
   Mail,
   ChevronRight,
-  Inbox
+  Inbox,
+  ShieldAlert
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,11 @@ const navItems = [
     title: "Audiences",
     href: "/audiences",
     icon: Users,
+  },
+  {
+    title: "Suppression",
+    href: "/suppressions",
+    icon: ShieldAlert,
   },
   {
     title: "Templates",
