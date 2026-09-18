@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -40,33 +40,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 via-slate-100 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      {/* Background Decorative Glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 right-10 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md mb-4">
-            <Mail className="h-6 w-6" />
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary via-indigo-600 to-violet-500 text-white shadow-xl shadow-primary/25 mb-4 ring-1 ring-white/20">
+            <Sparkles className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">MailPlatform</h1>
-          <p className="text-sm text-muted-foreground mt-1">Self-Hosted Email Marketing & Automation</p>
+          <div className="flex items-center justify-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight gradient-text">SendNova</h1>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-2 py-0.5 rounded-full border border-primary/20">PRO</span>
+          </div>
+          <p className="text-xs font-medium text-muted-foreground mt-1.5 uppercase tracking-widest">
+            High-Velocity Cold Outreach & Marketing Engine
+          </p>
         </div>
 
-        <Card className="shadow-lg border-border/80">
+        <Card className="glass-panel border-border/70 shadow-2xl shadow-black/5">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">Sign in</CardTitle>
-            <CardDescription>
-              Enter your credentials to manage campaigns & audiences
+            <CardTitle className="text-xl font-semibold tracking-tight">Sign in to console</CardTitle>
+            <CardDescription className="text-xs">
+              Enter your credentials to manage outreach campaigns, sequences & inboxes
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               {error && (
                 <Alert variant="destructive" className="py-2.5">
-                  <AlertDescription className="text-xs">{error}</AlertDescription>
+                  <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
                 </Alert>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold">Admin Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -76,15 +85,17 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-9"
+                    className="pl-9 h-10 text-sm bg-background/50 focus:bg-background transition-colors"
                     autoComplete="email"
                     autoFocus
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-xs font-semibold">Password</Label>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -94,33 +105,39 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pl-9"
+                    className="pl-9 h-10 text-sm bg-background/50 focus:bg-background transition-colors"
                     autoComplete="current-password"
                   />
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="pt-2">
-              <Button type="submit" disabled={loading} className="w-full">
+
+            <CardFooter className="pt-2 pb-6 flex flex-col gap-3">
+              <Button
+                type="submit"
+                className="w-full h-10 font-medium bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 transition-all"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    Authenticating...
                   </>
                 ) : (
                   <>
-                    Continue to Dashboard
+                    Launch Workspace
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
+
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                SES Ready • Multi-Domain Dedicated Pool
+              </div>
             </CardFooter>
           </form>
         </Card>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          Protected session &middot; AWS SES Production Mode
-        </p>
       </div>
     </div>
   )

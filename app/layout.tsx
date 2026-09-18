@@ -1,12 +1,12 @@
-﻿import type { Metadata } from "next"
+import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Email Marketing Platform",
-  description: "Self-hosted email marketing dashboard",
+  title: "SendNova — High-Velocity Cold Outreach & Marketing Engine",
+  description: "Self-hosted email marketing and cold sequence automation platform",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
