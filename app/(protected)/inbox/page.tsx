@@ -481,6 +481,14 @@ export default function InboxPage() {
                         </p>
                       )}
 
+                      {/* Campaign pill */}
+                      {thread.campaign?.name && (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded truncate max-w-[150px]">
+                            {thread.campaign.name}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
