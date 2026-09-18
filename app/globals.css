@@ -4,205 +4,108 @@
 
 @layer base {
   :root {
-    --background: 220 20% 98%;
-    --foreground: 224 71% 4%;
+    --background: 0 0% 98.5%;
+    --foreground: 220 20% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 220 20% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 220 20% 10%;
     --primary: 238 82% 59%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 220 14% 94%;
-    --secondary-foreground: 220 40% 10%;
-    --muted: 220 14% 94%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 10%;
+    --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
-    --accent: 238 82% 96%;
-    --accent-foreground: 238 82% 40%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 20% 10%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 89%;
-    --input: 220 13% 89%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 238 82% 59%;
-    --radius: 0.625rem;
+    --radius: 0.5rem;
   }
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
-    --card: 224 64% 7%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 64% 7%;
-    --popover-foreground: 210 40% 98%;
+    --background: 222 47% 7%;
+    --foreground: 210 20% 94%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 20% 94%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 20% 94%;
     --primary: 238 82% 64%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 238 82% 64%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 13%;
-    --input: 222 47% 13%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 47% 12%;
+    --secondary-foreground: 210 20% 94%;
+    --muted: 222 47% 12%;
+    --muted-foreground: 215 15% 52%;
+    --accent: 222 47% 12%;
+    --accent-foreground: 210 20% 94%;
+    --destructive: 0 63% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 47% 14%;
+    --input: 222 47% 14%;
     --ring: 238 82% 64%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    @apply bg-primary/15 text-primary;
+  }
 }
 
-/* Modern SaaS Utilities */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* ── Scrollbar ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
 }
-.dark .glass-panel {
-  background: rgba(13, 17, 28, 0.85);
-}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
 
-.gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* ── Status dot colours ── */
+.status-live   { color: hsl(213 94% 52%); }
+.status-done   { color: hsl(142 71% 45%); }
+.status-paused { color: hsl(43 96% 46%); }
+.status-error  { color: hsl(0 84% 60%); }
 
-.glow-border {
-  position: relative;
-}
-.glow-border::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25));
-  border-radius: inherit;
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* Email Editor Content Styling — overrides Tailwind's default CSS resets */
+/* ── Email editor (WYSIWYG contenteditable) ── */
 .email-content-editable {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  color: #1e293b;
+  color: hsl(var(--foreground));
 }
-
-.email-content-editable:empty:before {
+.email-content-editable:empty::before {
   content: attr(data-placeholder);
-  color: #94a3b8;
+  color: hsl(var(--muted-foreground));
   pointer-events: none;
   display: block;
 }
+.email-content-editable p { margin-bottom: 0.75em; }
+.email-content-editable h1 { font-size: 1.6rem; font-weight: 700; line-height: 1.25; margin: 1.25em 0 0.5em; }
+.email-content-editable h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.3; margin: 1em 0 0.4em; }
+.email-content-editable h3 { font-size: 1.1rem; font-weight: 600; line-height: 1.35; margin: 0.9em 0 0.35em; }
+.email-content-editable ul, .email-content-editable ol { padding-left: 1.5em; margin-bottom: 0.75em; }
+.email-content-editable li { margin-bottom: 0.3em; }
+.email-content-editable blockquote { border-left: 3px solid hsl(var(--border)); margin: 0.75em 0; padding: 0.4em 1em; color: hsl(var(--muted-foreground)); font-style: italic; }
+.email-content-editable a { color: hsl(var(--primary)); text-decoration: underline; }
+.email-content-editable pre { background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); border-radius: 6px; padding: 0.75em 1em; font-family: monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; }
+.email-content-editable code { background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); border-radius: 3px; padding: 0.15em 0.4em; font-family: monospace; font-size: 0.9em; }
+.email-content-editable img { max-width: 100%; border-radius: 4px; }
+.email-content-editable hr { border: none; border-top: 1px solid hsl(var(--border)); margin: 1.5em 0; }
+.email-content-editable table { border-collapse: collapse; width: 100%; margin-bottom: 0.75em; }
+.email-content-editable th, .email-content-editable td { border: 1px solid hsl(var(--border)); padding: 0.4em 0.75em; text-align: left; }
+.email-content-editable th { background: hsl(var(--muted)); font-weight: 600; }
 
-.email-content-editable p {
-  margin-bottom: 0.75em;
-}
-
-.email-content-editable h1 {
-  font-size: 1.75rem !important;
-  font-weight: 700 !important;
-  line-height: 1.25 !important;
-  margin-top: 1.25em !important;
-  margin-bottom: 0.5em !important;
-  color: #0f172a !important;
-}
-
-.email-content-editable h2 {
-  font-size: 1.35rem !important;
-  font-weight: 600 !important;
-  line-height: 1.3 !important;
-  margin-top: 1em !important;
-  margin-bottom: 0.4em !important;
-  color: #0f172a !important;
-}
-
-.email-content-editable h3 {
-  font-size: 1.15rem !important;
-  font-weight: 600 !important;
-  margin-top: 0.75em !important;
-  margin-bottom: 0.3em !important;
-  color: #0f172a !important;
-}
-
-.email-content-editable ul {
-  list-style-type: disc !important;
-  margin-left: 1.75rem !important;
-  margin-top: 0.5em !important;
-  margin-bottom: 0.75em !important;
-  padding-left: 0.5rem !important;
-}
-
-.email-content-editable ol {
-  list-style-type: decimal !important;
-  margin-left: 1.75rem !important;
-  margin-top: 0.5em !important;
-  margin-bottom: 0.75em !important;
-  padding-left: 0.5rem !important;
-}
-
-.email-content-editable li {
-  margin-bottom: 0.35em !important;
-  display: list-item !important;
-}
-
-.email-content-editable blockquote {
-  border-left: 4px solid #3b82f6 !important;
-  padding-left: 1rem !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  margin-top: 0.75em !important;
-  margin-bottom: 0.75em !important;
-  font-style: italic !important;
-  color: #475569 !important;
-  background-color: #f8fafc !important;
-  padding-top: 0.5rem !important;
-  padding-bottom: 0.5rem !important;
-  border-radius: 0 0.375rem 0.375rem 0 !important;
-}
-
-.email-content-editable hr {
-  border: 0 !important;
-  border-top: 1px solid #e2e8f0 !important;
-  margin: 1.5rem 0 !important;
-}
-
-.email-content-editable a {
-  color: #2563eb !important;
-  text-decoration: underline !important;
-}
-
-.email-content-editable img {
-  max-width: 100% !important;
-  height: auto !important;
-  border-radius: 6px !important;
-  margin: 8px 0 !important;
-  display: inline-block !important;
-}
-
-/* Line Spacing Presets */
-.email-content-editable.spacing-compact p {
-  margin-bottom: 0.25em !important;
-  line-height: 1.3 !important;
-}
-.email-content-editable.spacing-compact {
-  line-height: 1.3 !important;
-}
-
-.email-content-editable.spacing-normal p {
-  margin-bottom: 0.75em !important;
-  line-height: 1.6 !important;
-}
-.email-content-editable.spacing-normal {
-  line-height: 1.6 !important;
-}
-
-.email-content-editable.spacing-relaxed p {
-  margin-bottom: 1.25em !important;
-  line-height: 2.0 !important;
-}
-.email-content-editable.spacing-relaxed {
-  line-height: 2.0 !important;
-}
+/* ── Preview iframe container ── */
+.email-preview-desktop { width: 100%; min-height: 400px; }
+.email-preview-mobile  { width: 375px; min-height: 400px; margin: 0 auto; border: 1px solid hsl(var(--border)); border-radius: 8px; overflow: hidden; }

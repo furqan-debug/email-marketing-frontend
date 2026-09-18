@@ -1,143 +1,129 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { 
-  Users, 
-  Send, 
-  FileCode2, 
-  CheckCircle2, 
-  TrendingUp, 
-  PlusCircle, 
-  ArrowUpRight,
+import {
+  PlusCircle,
   RefreshCw,
   AlertCircle,
-  Zap,
-  Inbox,
-  ShieldCheck,
-  Sparkles,
-  Layers,
-  Activity,
   ChevronRight,
-  Clock,
-  ExternalLink
+  CornerDownLeft,
 } from 'lucide-react'
-import { getCampaigns, getAudiences, getTemplates } from '@/lib/api'
-import type { Campaign, Audience, Template } from '@/lib/types'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getCampaigns, getAudiences, getInboxThreads } from '@/lib/api'
+import type { Campaign, Audience, InboxThread } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { formatRate } from '@/lib/utils'
 
-export default function DashboardPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [audiences, setAudiences] = useState<Audience[]>([])
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+// ── helpers ──────────────────────────────────────────────
+function getInitials(name: string) {
+  const p = name.trim().split(/\s+/)
+  return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase()
+}
 
-  async function loadData() {
+function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60_000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  return d === 1 ? 'yesterday' : `${d}d ago`
+}
+
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-violet-500', 'bg-emerald-500',
+  'bg-amber-500', 'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500',
+]
+function avatarColor(email: string) {
+  let h = 0
+  for (const c of email) h = (h * 31 + c.charCodeAt(0)) | 0
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
+}
+
+function StatusDot({ status }: { status: string }) {
+  if (status === 'SENDING') return (
+    <span className="flex items-center gap-1.5 text-[13px] font-medium text-blue-600">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+      </span>
+      Live
+    </span>
+  )
+  if (status === 'COMPLETED') return (
+    <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+      Done
+    </span>
+  )
+  if (status === 'PAUSED') return (
+    <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <span className="h-2 w-2 rounded-full bg-amber-500" />
+      Paused
+    </span>
+  )
+  if (status === 'CANCELLED') return (
+    <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <span className="h-2 w-2 rounded-full bg-red-500" />
+      Cancelled
+    </span>
+  )
+  return <span className="text-[13px] text-muted-foreground">Draft</span>
+}
+
+// ── page ──────────────────────────────────────────────────
+export default function DashboardPage() {
+  const [campaigns,  setCampaigns]  = useState<Campaign[]>([])
+  const [audiences,  setAudiences]  = useState<Audience[]>([])
+  const [threads,    setThreads]    = useState<InboxThread[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState<string | null>(null)
+
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [cRes, aRes, tRes] = await Promise.all([
+      const [c, a, t] = await Promise.allSettled([
         getCampaigns(),
         getAudiences(),
-        getTemplates()
+        getInboxThreads(1, 5, 'unread'),
       ])
-      setCampaigns(cRes || [])
-      setAudiences(aRes || [])
-      setTemplates(tRes || [])
-    } catch (err: any) {
-      setError(err.message || 'Failed to load dashboard metrics')
+      if (c.status === 'fulfilled') setCampaigns(c.value || [])
+      if (a.status === 'fulfilled') setAudiences(a.value || [])
+      if (t.status === 'fulfilled') setThreads(t.value?.data || [])
+    } catch (e: any) {
+      setError(e.message || 'Failed to load')
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    loadData()
   }, [])
 
-  // Calculations
-  const totalContacts = audiences.reduce((acc, a) => acc + (a._count?.contacts || 0), 0)
-  const totalSent = campaigns.reduce((acc, c) => acc + (c.snapshot?.sent || 0), 0)
-  const totalOpened = campaigns.reduce((acc, c) => acc + (c.snapshot?.opened || 0), 0)
-  const totalReplied = campaigns.reduce((acc, c) => acc + (c.snapshot?.replied || 0), 0)
-  const completedCampaigns = campaigns.filter(c => c.status === 'COMPLETED').length
-  const activeCampaigns = campaigns.filter(c => c.status === 'SENDING').length
-  const recentCampaigns = [...campaigns].slice(0, 6)
+  useEffect(() => { load() }, [load])
 
-  const overallOpenRate = totalSent > 0 ? (totalOpened / totalSent) : 0
-  const overallReplyRate = totalSent > 0 ? (totalReplied / totalSent) : 0
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="h-3 w-3" />
-            Completed
-          </span>
-        )
-      case 'SENDING':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
-            Sending
-          </span>
-        )
-      case 'PAUSED':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            Paused
-          </span>
-        )
-      case 'CANCELLED':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-destructive/10 text-destructive border border-destructive/20">
-            Cancelled
-          </span>
-        )
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border">
-            Draft
-          </span>
-        )
-    }
-  }
+  // ── derived stats ──
+  const totalContacts  = audiences.reduce((s, a) => s + (a._count?.contacts || 0), 0)
+  const totalSent      = campaigns.reduce((s, c) => s + (c.snapshot?.sent    || 0), 0)
+  const totalReplied   = campaigns.reduce((s, c) => s + (c.snapshot?.replied || 0), 0)
+  const activeCmps     = campaigns.filter(c => c.status === 'SENDING').length
+  const replyRate      = totalSent > 0 ? totalReplied / totalSent : 0
+  const recentCmps     = campaigns.slice(0, 8)
 
   return (
-    <div className="space-y-8">
-      {/* Hero Welcome & Quick Action Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/70">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              SendNova Command Center
-            </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
-              <Zap className="h-3 w-3 fill-current" /> Fast Mode
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Real-time deliverability overview, sequence pipelines, and cold outreach performance.
-          </p>
-        </div>
+    <div className="space-y-6">
 
-        <div className="flex items-center gap-2.5">
-          <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="gap-1.5 text-xs">
+      {/* ── header ── */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="h-8 text-xs gap-1.5">
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-
-          <Button asChild size="sm" className="gap-1.5 shadow-sm shadow-primary/25 bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 text-xs font-semibold">
+          <Button asChild size="sm" className="h-8 text-xs gap-1.5 shadow-sm">
             <Link href="/campaigns/new">
-              <PlusCircle className="h-4 w-4" />
+              <PlusCircle className="h-3.5 w-3.5" />
               New Campaign
             </Link>
           </Button>
@@ -145,351 +131,217 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error loading dashboard</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="flex items-center gap-2 text-sm text-destructive border border-destructive/30 rounded-md px-3 py-2 bg-destructive/5">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
       )}
 
-      {/* Deliverability & Sender Reputation Gauge */}
-      <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/[0.07] via-background to-primary/[0.05] p-4 sm:p-5 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm text-foreground">SES Infrastructure Health: Optimal (100%)</h3>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500 text-white dark:text-black">
-                  Protected
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Managed Dedicated IP Pool active • 0 Hard Bounces • Suppression guards enabled • Pure MIME sanitized
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs">
-            <div className="text-right">
-              <span className="text-muted-foreground text-[11px] block">Avg Delivery Rate</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">99.8%</span>
-            </div>
-            <div className="h-8 w-px bg-border/80" />
-            <div className="text-right">
-              <span className="text-muted-foreground text-[11px] block">Spam & Unsub</span>
-              <span className="font-mono font-bold text-foreground text-sm">0.0%</span>
-            </div>
-            <div className="h-8 w-px bg-border/80" />
-            <Button variant="outline" size="sm" asChild className="h-8 text-xs">
-              <Link href="/suppressions">Compliance Center</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Modern Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="hover:border-primary/40 transition-colors shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Audience</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Users className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold font-mono tracking-tight">{totalContacts.toLocaleString()}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-              <span>Across {audiences.length} audience list{audiences.length === 1 ? '' : 's'}</span>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-primary/40 transition-colors shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Campaigns</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Send className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold font-mono tracking-tight">{campaigns.length}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {completedCampaigns} completed • {activeCampaigns} active
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-primary/40 transition-colors shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dispatched Emails</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold font-mono tracking-tight">{totalSent.toLocaleString()}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Direct AWS SES Delivery
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-primary/40 transition-colors shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Prospect Replies</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <Inbox className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold font-mono tracking-tight text-purple-600 dark:text-purple-400">
-                {totalReplied.toLocaleString()}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-              <span>{formatRate(overallReplyRate)} avg reply rate</span>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Engagement Velocity Funnel */}
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                Aggregated Outreach Engagement Funnel
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Real-time conversion velocity from raw dispatch to prospect replies
-              </CardDescription>
-            </div>
-            <span className="text-xs font-mono text-muted-foreground">
-              {totalSent} total messages tracked
+      {/* ── compact stat strip ── */}
+      <div className="flex items-center gap-3 text-sm border-b border-border pb-5">
+        {loading ? (
+          <Skeleton className="h-5 w-64" />
+        ) : (
+          <>
+            <span>
+              <strong className="font-semibold tabular-nums">{totalContacts.toLocaleString()}</strong>
+              <span className="text-muted-foreground ml-1">contacts</span>
             </span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Step Progress Bar */}
-            <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">
-              <div style={{ width: '100%' }} className="bg-primary/70 h-full" title="Dispatched (100%)" />
-              <div style={{ width: `${Math.min(100, overallOpenRate * 100)}%` }} className="bg-emerald-500 h-full" title="Opened" />
-              <div style={{ width: `${Math.min(100, overallReplyRate * 100)}%` }} className="bg-purple-500 h-full" title="Replied" />
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-center">
-              <div className="p-3 rounded-lg bg-muted/40 border border-border/50">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase block">Dispatched</span>
-                <span className="font-mono text-base font-bold text-foreground">{totalSent}</span>
-                <span className="text-[10px] text-muted-foreground block">100% target</span>
-              </div>
-              <div className="p-3 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/20">
-                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase block">Opened</span>
-                <span className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">{totalOpened}</span>
-                <span className="text-[10px] text-muted-foreground block">{formatRate(overallOpenRate)} open rate</span>
-              </div>
-              <div className="p-3 rounded-lg bg-indigo-500/[0.05] border border-indigo-500/20">
-                <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase block">Templates</span>
-                <span className="font-mono text-base font-bold text-indigo-600 dark:text-indigo-400">{templates.length}</span>
-                <span className="text-[10px] text-muted-foreground block">Visual presets</span>
-              </div>
-              <div className="p-3 rounded-lg bg-purple-500/[0.05] border border-purple-500/20">
-                <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 uppercase block">Replies</span>
-                <span className="font-mono text-base font-bold text-purple-600 dark:text-purple-400">{totalReplied}</span>
-                <span className="text-[10px] text-muted-foreground block">{formatRate(overallReplyRate)} reply rate</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Action Shortcuts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link href="/audiences" className="group">
-          <Card className="h-full hover:border-primary/50 transition-all hover:shadow-md bg-card/60">
-            <CardHeader className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-sm font-semibold">Audiences & Leads</CardTitle>
-                    <CardDescription className="text-xs">Import CSV & segment lists</CardDescription>
-                  </div>
-                </div>
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary transition-transform" />
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/campaigns/new" className="group">
-          <Card className="h-full hover:border-primary/50 transition-all hover:shadow-md border-primary/20 bg-primary/[0.02]">
-            <CardHeader className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
-                    <Send className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-sm font-semibold">Launch Sequence</CardTitle>
-                    <CardDescription className="text-xs">Multi-step cold outreach</CardDescription>
-                  </div>
-                </div>
-                <ArrowUpRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/inbox" className="group">
-          <Card className="h-full hover:border-primary/50 transition-all hover:shadow-md bg-card/60">
-            <CardHeader className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                    <Inbox className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-sm font-semibold">Unified Inbox</CardTitle>
-                    <CardDescription className="text-xs">Manage incoming responses</CardDescription>
-                  </div>
-                </div>
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-purple-600 transition-transform" />
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
+            <span className="text-border select-none">·</span>
+            <span>
+              <strong className="font-semibold tabular-nums">{campaigns.length}</strong>
+              <span className="text-muted-foreground ml-1">campaigns</span>
+              {activeCmps > 0 && (
+                <span className="ml-1.5 text-xs font-medium text-blue-600 tabular-nums">({activeCmps} live)</span>
+              )}
+            </span>
+            <span className="text-border select-none">·</span>
+            <span>
+              <strong className="font-semibold tabular-nums">{totalSent.toLocaleString()}</strong>
+              <span className="text-muted-foreground ml-1">sent</span>
+            </span>
+            <span className="text-border select-none">·</span>
+            <span>
+              <strong className="font-semibold tabular-nums">{formatRate(replyRate)}</strong>
+              <span className="text-muted-foreground ml-1">reply rate</span>
+            </span>
+          </>
+        )}
       </div>
 
-      {/* Recent Campaign Performance Table */}
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <CardTitle className="text-base font-semibold">Recent Outreach Campaigns</CardTitle>
-            <CardDescription className="text-xs">
-              Delivery metrics, unique engagement, and conversion stats
-            </CardDescription>
+      {/* ── campaigns table ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold">Campaigns</h2>
+          <Link href="/campaigns" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+            View all <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        <div className="border border-border rounded-lg overflow-hidden">
+          {/* table header */}
+          <div className="grid grid-cols-[1fr_100px_80px_80px_80px_80px] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/40 border-b border-border px-4 py-2.5">
+            <div>Campaign</div>
+            <div>Status</div>
+            <div className="text-right">Sent</div>
+            <div className="text-right">Opens</div>
+            <div className="text-right">Replies</div>
+            <div className="text-right">Action</div>
           </div>
-          <Button variant="ghost" size="sm" asChild className="text-xs font-semibold gap-1 text-primary hover:text-primary">
-            <Link href="/campaigns">
-              View All Campaigns
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
+
           {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+            <div className="divide-y divide-border">
+              {[1,2,3].map(i => (
+                <div key={i} className="grid grid-cols-[1fr_100px_80px_80px_80px_80px] px-4 py-3 items-center gap-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-10 ml-auto" />
+                  <Skeleton className="h-4 w-10 ml-auto" />
+                  <Skeleton className="h-4 w-10 ml-auto" />
+                  <Skeleton className="h-4 w-12 ml-auto" />
+                </div>
+              ))}
             </div>
-          ) : recentCampaigns.length === 0 ? (
-            <div className="text-center py-12 border border-dashed rounded-lg">
-              <Send className="mx-auto h-8 w-8 text-muted-foreground/60 mb-3" />
-              <p className="text-sm font-medium text-foreground">No campaigns dispatched yet</p>
-              <p className="text-xs text-muted-foreground mt-1 mb-4">
-                Launch your first email campaign to start tracking delivery and engagement.
-              </p>
-              <Button asChild size="sm">
-                <Link href="/campaigns/new">Create Campaign</Link>
+          ) : recentCmps.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <p className="text-sm text-muted-foreground">No campaigns yet.</p>
+              <Button asChild size="sm" className="mt-3 h-8 text-xs">
+                <Link href="/campaigns/new">Create one</Link>
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign & Subject</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Sent</TableHead>
-                  <TableHead className="text-right">Opens</TableHead>
-                  <TableHead className="text-right">Replies</TableHead>
-                  <TableHead className="text-right">Open Rate</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentCampaigns.map((c) => {
-                  const snap = c.snapshot
-                  const openRate = snap && snap.sent > 0 ? (snap.opened / snap.sent) : 0
-                  return (
-                    <TableRow key={c.id} className="hover:bg-muted/40 transition-colors">
-                      <TableCell className="font-medium">
-                        <Link href={`/campaigns/${c.id}`} className="hover:underline font-semibold text-foreground flex items-center gap-1.5 group">
-                          <span>{c.name}</span>
-                          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
-                        </Link>
-                        {c.subject && (
-                          <div className="text-xs text-muted-foreground truncate max-w-xs mt-0.5">
-                            {c.subject}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(c.status)}</TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {snap ? snap.sent.toLocaleString() : '—'}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {snap ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                            {snap.opened}{' '}
-                            <span className="text-[10px] text-muted-foreground font-normal">({snap.totalOpens})</span>
-                          </span>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {snap && snap.replied > 0 ? (
-                          <span className="font-bold text-purple-600 dark:text-purple-400">
-                            {snap.replied}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs font-semibold">
-                        {snap ? (
-                          <span className={openRate > 0.3 ? 'text-emerald-600 font-bold' : ''}>
-                            {formatRate(openRate)}
-                          </span>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" asChild className="h-8 text-xs">
-                          <Link href={`/campaigns/${c.id}`}>Details</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+            <div className="divide-y divide-border">
+              {recentCmps.map(c => {
+                const snap = c.snapshot
+                const openRate = snap && snap.sent > 0 ? snap.opened / snap.sent : 0
+                const href = c.status === 'DRAFT' ? `/campaigns/${c.id}/edit` : `/campaigns/${c.id}`
+                return (
+                  <div
+                    key={c.id}
+                    className="grid grid-cols-[1fr_100px_80px_80px_80px_80px] px-4 py-3 items-center hover:bg-muted/30 transition-colors cursor-pointer group"
+                    onClick={() => { window.location.href = href }}
+                  >
+                    {/* name + subject */}
+                    <div className="min-w-0 pr-4">
+                      <div className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        {c.name}
+                      </div>
+                      {c.subject && (
+                        <div className="text-[12px] text-muted-foreground truncate mt-0.5">{c.subject}</div>
+                      )}
+                    </div>
+                    {/* status */}
+                    <div><StatusDot status={c.status} /></div>
+                    {/* sent */}
+                    <div className="text-right font-mono text-[13px] text-muted-foreground">
+                      {snap ? snap.sent.toLocaleString() : '—'}
+                    </div>
+                    {/* open rate */}
+                    <div className="text-right font-mono text-[13px]">
+                      {snap && snap.sent > 0 ? (
+                        <span className={openRate > 0.3 ? 'text-emerald-600 font-semibold' : 'text-muted-foreground'}>
+                          {formatRate(openRate)}
+                        </span>
+                      ) : '—'}
+                    </div>
+                    {/* replies */}
+                    <div className="text-right font-mono text-[13px]">
+                      {snap ? (
+                        snap.replied > 0
+                          ? <span className="font-semibold">{snap.replied}</span>
+                          : <span className="text-muted-foreground">0</span>
+                      ) : '—'}
+                    </div>
+                    {/* action */}
+                    <div className="text-right" onClick={e => e.stopPropagation()}>
+                      <Link
+                        href={href}
+                        className="text-[12px] font-medium text-primary hover:underline"
+                      >
+                        {c.status === 'DRAFT' ? 'Edit' : 'View'}
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* ── latest replies ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold">
+            Latest Replies
+            {threads.length > 0 && (
+              <span className="ml-2 text-[11px] font-normal text-muted-foreground tabular-nums">
+                {threads.length} unread
+              </span>
+            )}
+          </h2>
+          <Link href="/inbox" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+            Open inbox <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        <div className="border border-border rounded-lg overflow-hidden">
+          {loading ? (
+            <div className="divide-y divide-border">
+              {[1,2].map(i => (
+                <div key={i} className="flex items-start gap-3 px-4 py-3">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-3.5 w-40" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : threads.length === 0 ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-sm text-muted-foreground">No unread replies.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {threads.map(thread => {
+                const name = thread.contactName || thread.contactEmail.split('@')[0]
+                const preview = (thread as any).preview || ''
+                const time = relativeTime((thread as any).lastActivityAt || thread.updatedAt)
+                return (
+                  <div key={thread.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors group">
+                    {/* avatar */}
+                    <div className={`h-8 w-8 rounded-full ${avatarColor(thread.contactEmail)} text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5`}>
+                      {getInitials(name)}
+                    </div>
+                    {/* content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-foreground truncate">{name}</span>
+                        <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">{time}</span>
+                      </div>
+                      <div className="text-[12px] text-muted-foreground truncate mt-0.5">
+                        {thread.campaign?.name && (
+                          <span className="text-muted-foreground/70">{thread.campaign.name} · </span>
+                        )}
+                        {preview || thread.subject || '(no preview)'}
+                      </div>
+                    </div>
+                    {/* reply link */}
+                    <Link
+                      href="/inbox"
+                      className="shrink-0 flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      Reply <CornerDownLeft className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   )
 }
-

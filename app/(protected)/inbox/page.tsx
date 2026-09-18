@@ -308,16 +308,14 @@ export default function InboxPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Inbox</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Inbox</h1>
             {stats && stats.unread > 0 && (
-              <Badge className="bg-blue-600 hover:bg-blue-600 text-white rounded-full px-2.5 py-0.5 text-xs font-semibold">
+              <span className="text-[11px] font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full tabular-nums">
                 {stats.unread} unread
-              </Badge>
+              </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Read, manage, and reply to inbound prospect emails in real-time.
-          </p>
+
         </div>
 
         <div className="flex items-center gap-2">
@@ -366,7 +364,7 @@ export default function InboxPage() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs">
+            <div className="flex items-center gap-0 overflow-x-auto text-xs border-t border-border/50 -mx-3 px-3 pt-2">
               {[
                 { key: "all", label: "All", count: stats?.total },
                 { key: "unread", label: "Unread", count: stats?.unread },
@@ -378,17 +376,15 @@ export default function InboxPage() {
                   <button
                     key={tab.key}
                     onClick={() => setStatusFilter(tab.key)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "border-primary text-foreground font-semibold"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <span>{tab.label}</span>
+                    {tab.label}
                     {tab.count !== undefined && tab.count > 0 && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground font-normal"}`}>
-                        {tab.count}
-                      </span>
+                      <span className="ml-1 text-[10px] tabular-nums text-muted-foreground/70">{tab.count}</span>
                     )}
                   </button>
                 )
@@ -485,23 +481,9 @@ export default function InboxPage() {
                         </p>
                       )}
 
-                      {/* Tags row */}
-                      <div className="flex items-center justify-between gap-2 mt-1.5">
-                        <span className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded truncate max-w-[140px]">
-                          {thread.campaign?.name || "Campaign"}
-                        </span>
-                        {thread.status === "unread" && (
-                          <Badge className="bg-blue-600 text-white text-[9px] px-1.5 py-0 font-medium">Unread</Badge>
-                        )}
-                        {thread.status === "replied" && (
-                          <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 font-medium">Replied</Badge>
-                        )}
-                        {thread.status === "archived" && (
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground">Archived</Badge>
-                        )}
-                      </div>
                     </div>
                   </div>
+
                 )
               })
             )}
@@ -779,12 +761,7 @@ export default function InboxPage() {
                     className="text-xs resize-none bg-background focus-visible:ring-primary leading-relaxed"
                   />
 
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                      Direct SMTP/SES delivery into prospect inbox
-                    </span>
-
+                  <div className="flex items-center justify-end pt-1">
                     <Button
                       type="submit"
                       size="sm"

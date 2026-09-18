@@ -2,495 +2,308 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { 
-  Send, 
-  PlusCircle, 
-  RefreshCw, 
-  AlertCircle, 
-  ChevronRight, 
+import {
+  PlusCircle,
+  RefreshCw,
+  AlertCircle,
   Trash2,
   Loader2,
-  Eye, 
-  MousePointerClick, 
-  BarChart3,
-  Clock,
   Edit3,
+  ChevronRight,
   Search,
-  Sparkles,
-  Layers,
-  Activity,
-  CheckCircle2,
-  Filter
 } from 'lucide-react'
-
 import { getCampaigns, deleteCampaign } from '@/lib/api'
 import type { Campaign } from '@/lib/types'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { formatRate } from '@/lib/utils'
 
+function StatusDot({ status }: { status: string }) {
+  if (status === 'SENDING') return (
+    <span className="flex items-center gap-1.5 text-[13px] font-medium text-blue-600">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+      </span>
+      Live
+    </span>
+  )
+  if (status === 'COMPLETED') return (
+    <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <span className="h-2 w-2 rounded-full bg-emerald-500" />Done
+    </span>
+  )
+  if (status === 'PAUSED') return (
+    <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <span className="h-2 w-2 rounded-full bg-amber-500" />Paused
+    </span>
+  )
+  if (status === 'CANCELLED') return (
+    <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <span className="h-2 w-2 rounded-full bg-red-400" />Cancelled
+    </span>
+  )
+  return <span className="text-[13px] text-muted-foreground">Draft</span>
+}
+
+const TABS = [
+  { key: 'all',       label: 'All' },
+  { key: 'SENDING',   label: 'Live' },
+  { key: 'COMPLETED', label: 'Completed' },
+  { key: 'DRAFT',     label: 'Draft' },
+] as const
+
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Filter & Search state
-  const [activeTab, setActiveTab] = useState<'all' | 'sending' | 'completed' | 'draft'>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState<string | null>(null)
+  const [tab,       setTab]       = useState<string>('all')
+  const [q,         setQ]         = useState('')
 
-  // Delete State
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
-  const [deleteConfirmName, setDeleteConfirmName] = useState<string>('')
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteId,   setDeleteId]   = useState<string | null>(null)
+  const [deleteName, setDeleteName] = useState('')
+  const [deleting,   setDeleting]   = useState(false)
+  const [deleteErr,  setDeleteErr]  = useState<string | null>(null)
 
-  async function loadCampaignsList() {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await getCampaigns()
-      setCampaigns(res || [])
-    } catch (err: any) {
-      setError(err.message || 'Failed to load campaigns')
-    } finally {
-      setLoading(false)
+  async function load() {
+    setLoading(true); setError(null)
+    try { setCampaigns(await getCampaigns() || []) }
+    catch (e: any) { setError(e.message || 'Failed') }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const filtered = useMemo(() => {
+    let list = campaigns
+    if (tab !== 'all') list = list.filter(c => c.status === tab)
+    if (q.trim()) {
+      const lq = q.toLowerCase()
+      list = list.filter(c =>
+        c.name.toLowerCase().includes(lq) ||
+        (c.subject || '').toLowerCase().includes(lq)
+      )
     }
-  }
+    return list
+  }, [campaigns, tab, q])
 
-  function handleDelete(id: string, name: string, e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setDeleteConfirmId(id)
-    setDeleteConfirmName(name)
-    setDeleteError(null)
-  }
+  const counts = useMemo(() => ({
+    all:       campaigns.length,
+    SENDING:   campaigns.filter(c => c.status === 'SENDING').length,
+    COMPLETED: campaigns.filter(c => c.status === 'COMPLETED').length,
+    DRAFT:     campaigns.filter(c => c.status === 'DRAFT').length,
+  }), [campaigns])
 
   async function confirmDelete() {
-    if (!deleteConfirmId) return
-    setDeletingId(deleteConfirmId)
-    setDeleteError(null)
+    if (!deleteId) return
+    setDeleting(true); setDeleteErr(null)
     try {
-      await deleteCampaign(deleteConfirmId)
-      setDeleteConfirmId(null)
-      setDeleteConfirmName('')
-      await loadCampaignsList()
-    } catch (err: any) {
-      setDeleteError(err.message || 'Failed to delete campaign.')
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  useEffect(() => {
-    loadCampaignsList()
-  }, [])
-
-  // Metrics computation
-  const stats = useMemo(() => {
-    const total = campaigns.length
-    const sending = campaigns.filter(c => c.status === 'SENDING').length
-    const completed = campaigns.filter(c => c.status === 'COMPLETED').length
-    const drafts = campaigns.filter(c => c.status === 'DRAFT').length
-    
-    let totalSent = 0
-    let totalOpened = 0
-    campaigns.forEach(c => {
-      if (c.snapshot) {
-        totalSent += c.snapshot.sent || 0
-        totalOpened += c.snapshot.opened || 0
-      }
-    })
-    const avgOpenRate = totalSent > 0 ? (totalOpened / totalSent) : 0
-    return { total, sending, completed, drafts, totalSent, totalOpened, avgOpenRate }
-  }, [campaigns])
-
-  // Filtered campaigns
-  const filteredCampaigns = useMemo(() => {
-    return campaigns.filter(c => {
-      // Tab filter
-      if (activeTab === 'sending' && c.status !== 'SENDING') return false
-      if (activeTab === 'completed' && c.status !== 'COMPLETED') return false
-      if (activeTab === 'draft' && c.status !== 'DRAFT') return false
-
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
-        const nameMatch = c.name.toLowerCase().includes(q)
-        const subjectMatch = c.subject ? c.subject.toLowerCase().includes(q) : false
-        return nameMatch || subjectMatch
-      }
-      return true
-    })
-  }, [campaigns, activeTab, searchQuery])
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Completed
-          </span>
-        )
-      case 'SENDING':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 animate-pulse">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
-            Sending...
-          </span>
-        )
-      case 'PAUSED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            Paused
-          </span>
-        )
-      case 'CANCELLED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-            Cancelled
-          </span>
-        )
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-muted-foreground border border-border">
-            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-            Draft
-          </span>
-        )
-    }
+      await deleteCampaign(deleteId)
+      setDeleteId(null)
+      await load()
+    } catch (e: any) { setDeleteErr(e.message || 'Failed') }
+    finally { setDeleting(false) }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">Campaigns</h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-              {campaigns.length} Total
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Build, dispatch, and track high-velocity cold email sequences and broadcasts
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Button variant="outline" size="sm" onClick={loadCampaignsList} disabled={loading} className="glass-panel">
-            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+    <div className="space-y-5">
+
+      {/* header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold tracking-tight">Campaigns</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="h-8 text-xs gap-1.5">
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20">
+          <Button asChild size="sm" className="h-8 text-xs gap-1.5 shadow-sm">
             <Link href="/campaigns/new">
-              <PlusCircle className="h-4 w-4 mr-1.5" />
-              New Sequence
+              <PlusCircle className="h-3.5 w-3.5" />
+              New Campaign
             </Link>
           </Button>
         </div>
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="flex items-center gap-2 text-sm text-destructive border border-destructive/30 rounded-md px-3 py-2 bg-destructive/5">
+          <AlertCircle className="h-4 w-4 shrink-0" />{error}
+        </div>
       )}
 
-      {/* Metric Quick-Pills Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="glass-panel p-3.5 rounded-xl border border-border/60">
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Active Sending</div>
-          <div className="text-xl font-bold font-mono text-blue-500 mt-1 flex items-center gap-2">
-            {stats.sending}
-            {stats.sending > 0 && <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-          </div>
+      {/* tabs + search */}
+      <div className="flex items-center justify-between gap-4 border-b border-border">
+        <div className="flex items-center gap-0">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                tab === t.key
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {t.label}
+              <span className={`ml-1.5 text-[11px] tabular-nums ${
+                tab === t.key ? 'text-muted-foreground' : 'text-muted-foreground/60'
+              }`}>
+                {counts[t.key as keyof typeof counts]}
+              </span>
+            </button>
+          ))}
         </div>
-        <div className="glass-panel p-3.5 rounded-xl border border-border/60">
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Completed</div>
-          <div className="text-xl font-bold font-mono text-emerald-500 mt-1">{stats.completed}</div>
-        </div>
-        <div className="glass-panel p-3.5 rounded-xl border border-border/60">
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Draft Sequences</div>
-          <div className="text-xl font-bold font-mono text-muted-foreground mt-1">{stats.drafts}</div>
-        </div>
-        <div className="glass-panel p-3.5 rounded-xl border border-border/60">
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Avg Open Rate</div>
-          <div className="text-xl font-bold font-mono text-foreground mt-1">{formatRate(stats.avgOpenRate)}</div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/50 max-w-fit">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === 'all'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            All ({campaigns.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('sending')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === 'sending'
-                ? 'bg-background text-blue-500 shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Sending ({stats.sending})
-          </button>
-          <button
-            onClick={() => setActiveTab('completed')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === 'completed'
-                ? 'bg-background text-emerald-500 shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Completed ({stats.completed})
-          </button>
-          <button
-            onClick={() => setActiveTab('draft')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === 'draft'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Drafts ({stats.drafts})
-          </button>
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative pb-px">
+          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search campaigns & subjects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-xs bg-background/60 rounded-xl"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Search campaigns..."
+            className="pl-8 h-8 text-xs w-52 bg-background"
           />
         </div>
       </div>
 
-      {/* Campaigns Table */}
-      <Card className="glass-panel border-border/70 shadow-sm overflow-hidden">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-            </div>
-          ) : filteredCampaigns.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/80 text-muted-foreground mb-4">
-                <Send className="h-6 w-6" />
-              </div>
-              <p className="text-base font-semibold text-foreground">No campaigns found</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto mb-5">
-                {searchQuery
-                  ? `No campaigns match "${searchQuery}". Try clearing your search.`
-                  : 'Get started by creating your first multi-step cold outreach sequence or broadcast.'}
-              </p>
-              <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Link href="/campaigns/new">
-                  <PlusCircle className="mr-1.5 h-4 w-4" />
-                  Create Sequence
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-border/70 hover:bg-transparent">
-                    <TableHead className="font-semibold text-xs py-3.5 pl-6">Campaign & Subject</TableHead>
-                    <TableHead className="font-semibold text-xs py-3.5">Status</TableHead>
-                    <TableHead className="font-semibold text-xs py-3.5 text-right">Sent</TableHead>
-                    <TableHead className="font-semibold text-xs py-3.5 text-right">Unique Opens</TableHead>
-                    <TableHead className="font-semibold text-xs py-3.5 text-right">Unique Clicks</TableHead>
-                    <TableHead className="font-semibold text-xs py-3.5 text-right">Open Rate</TableHead>
-                    <TableHead className="font-semibold text-xs py-3.5 text-right pr-6">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCampaigns.map((c) => {
-                    const snap = c.snapshot
-                    const openRate = snap && snap.sent > 0 ? (snap.opened / snap.sent) : 0
-                    const clickRate = snap && snap.sent > 0 ? (snap.clicked / snap.sent) : 0
-                    
-                    return (
-                      <TableRow 
-                        key={c.id} 
-                        className="cursor-pointer hover:bg-muted/40 transition-colors border-b border-border/50 group"
-                        onClick={() => {
-                          window.location.href = c.status === 'DRAFT' ? `/campaigns/${c.id}/edit` : `/campaigns/${c.id}`
-                        }}
-                      >
-                        <TableCell className="py-4 pl-6">
-                          <div className="flex items-start gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
-                              <Send className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <div className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
-                                {c.name}
-                              </div>
-                              {c.subject ? (
-                                <div className="text-xs text-muted-foreground line-clamp-1 max-w-sm mt-0.5">
-                                  {c.subject}
-                                </div>
-                              ) : (
-                                <div className="text-xs text-muted-foreground/60 italic mt-0.5">
-                                  Multi-step sequence
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">{getStatusBadge(c.status)}</TableCell>
-                        <TableCell className="py-4 text-right font-mono text-xs font-semibold">
-                          {snap ? snap.sent.toLocaleString() : '—'}
-                        </TableCell>
-                        <TableCell className="py-4 text-right font-mono text-xs">
-                          {snap ? (
-                            <div>
-                              <span className="font-semibold text-foreground">{snap.opened}</span>
-                              <span className="text-[10px] text-muted-foreground ml-1">({snap.totalOpens} tot)</span>
-                            </div>
-                          ) : '—'}
-                        </TableCell>
-                        <TableCell className="py-4 text-right font-mono text-xs">
-                          {snap ? (
-                            <div>
-                              <span className="font-semibold text-foreground">{snap.clicked}</span>
-                              <span className="text-[10px] text-muted-foreground ml-1">({snap.totalClicks} tot)</span>
-                            </div>
-                          ) : '—'}
-                        </TableCell>
-                        <TableCell className="py-4 text-right">
-                          {snap && snap.sent > 0 ? (
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="font-mono text-xs font-bold text-foreground">
-                                {formatRate(openRate)}
-                              </span>
-                              <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-primary to-indigo-500 rounded-full"
-                                  style={{ width: `${Math.min(openRate * 100, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="font-mono text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5">
-                            {c.status === 'DRAFT' ? (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                asChild 
-                                className="h-8 text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
-                              >
-                                <Link href={`/campaigns/${c.id}/edit`}>
-                                  <Edit3 className="mr-1 h-3.5 w-3.5" />
-                                  Edit Draft
-                                </Link>
-                              </Button>
-                            ) : (
-                              <Button variant="ghost" size="sm" asChild className="h-8 text-xs font-medium hover:bg-primary/10 hover:text-primary">
-                                <Link href={`/campaigns/${c.id}`}>
-                                  Analytics
-                                  <ChevronRight className="ml-1 h-3.5 w-3.5" />
-                                </Link>
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                              disabled={deletingId === c.id}
-                              onClick={(e) => handleDelete(c.id, c.name, e)}
-                              title="Delete campaign"
-                            >
-                              {deletingId === c.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* table */}
+      <div className="border border-border rounded-lg overflow-hidden">
+        {/* header row */}
+        <div className="grid grid-cols-[1fr_100px_80px_80px_80px_64px_60px] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/40 border-b border-border px-4 py-2.5">
+          <div>Campaign</div>
+          <div>Status</div>
+          <div className="text-right">Sent</div>
+          <div className="text-right">Open%</div>
+          <div className="text-right">Replies</div>
+          <div className="text-right">Action</div>
+          <div />
+        </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => {
-        if (!open) { setDeleteConfirmId(null); setDeleteConfirmName(''); setDeleteError(null) }
-      }}>
-        <DialogContent className="glass-panel border-border/80">
+        {loading ? (
+          <div className="divide-y divide-border">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="grid grid-cols-[1fr_100px_80px_80px_80px_64px_60px] px-4 py-3 items-center">
+                <div className="space-y-1.5"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-56" /></div>
+                <Skeleton className="h-4 w-14" />
+                <Skeleton className="h-4 w-10 ml-auto" />
+                <Skeleton className="h-4 w-10 ml-auto" />
+                <Skeleton className="h-4 w-8 ml-auto" />
+                <Skeleton className="h-4 w-8 ml-auto" />
+                <div />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              {q ? `No campaigns match "${q}".` : 'No campaigns yet.'}
+            </p>
+            {!q && (
+              <Button asChild size="sm" className="mt-3 h-8 text-xs">
+                <Link href="/campaigns/new">Create one</Link>
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {filtered.map(c => {
+              const snap     = c.snapshot
+              const openRate = snap && snap.sent > 0 ? snap.opened / snap.sent : 0
+              const href     = c.status === 'DRAFT' ? `/campaigns/${c.id}/edit` : `/campaigns/${c.id}`
+              return (
+                <div
+                  key={c.id}
+                  className="grid grid-cols-[1fr_100px_80px_80px_80px_64px_60px] px-4 py-3 items-center hover:bg-muted/30 transition-colors cursor-pointer group"
+                  onClick={() => { window.location.href = href }}
+                >
+                  {/* name + subject */}
+                  <div className="min-w-0 pr-4">
+                    <div className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                      {c.name}
+                    </div>
+                    {c.subject && (
+                      <div className="text-[12px] text-muted-foreground truncate mt-0.5">{c.subject}</div>
+                    )}
+                  </div>
+                  {/* status */}
+                  <div><StatusDot status={c.status} /></div>
+                  {/* sent */}
+                  <div className="text-right font-mono text-[13px] text-muted-foreground">
+                    {snap ? snap.sent.toLocaleString() : '—'}
+                  </div>
+                  {/* open rate */}
+                  <div className="text-right font-mono text-[13px]">
+                    {snap && snap.sent > 0 ? (
+                      <span className={openRate > 0.3 ? 'text-emerald-600 font-semibold' : 'text-muted-foreground'}>
+                        {formatRate(openRate)}
+                      </span>
+                    ) : '—'}
+                  </div>
+                  {/* replies */}
+                  <div className="text-right font-mono text-[13px]">
+                    {snap
+                      ? snap.replied > 0
+                        ? <span className="font-semibold">{snap.replied}</span>
+                        : <span className="text-muted-foreground">0</span>
+                      : '—'}
+                  </div>
+                  {/* view/edit link */}
+                  <div className="text-right" onClick={e => e.stopPropagation()}>
+                    {c.status === 'DRAFT' ? (
+                      <Link href={`/campaigns/${c.id}/edit`}
+                        className="text-[12px] font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Edit
+                      </Link>
+                    ) : (
+                      <Link href={`/campaigns/${c.id}`}
+                        className="text-[12px] font-medium text-muted-foreground hover:text-primary transition-colors flex items-center justify-end gap-0.5">
+                        View <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    )}
+                  </div>
+                  {/* delete */}
+                  <div className="text-right" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => { setDeleteId(c.id); setDeleteName(c.name); setDeleteErr(null) }}
+                      className="p-1 text-muted-foreground/40 hover:text-destructive transition-colors rounded opacity-0 group-hover:opacity-100"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* delete dialog */}
+      <Dialog open={!!deleteId} onOpenChange={open => { if (!open) { setDeleteId(null); setDeleteErr(null) } }}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Delete Campaign</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground pt-1">
-              Are you sure you want to delete <strong className="text-foreground">"{deleteConfirmName}"</strong>?
-              This will permanently delete the campaign, all queued/sent sequence messages, tracking events, and analytics snapshots.
+            <DialogTitle>Delete campaign?</DialogTitle>
+            <DialogDescription className="text-sm">
+              <strong>"{deleteName}"</strong> and all its messages, tracking events, and analytics will be permanently removed.
             </DialogDescription>
           </DialogHeader>
-          {deleteError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">{deleteError}</AlertDescription>
-            </Alert>
+          {deleteErr && (
+            <p className="text-xs text-destructive">{deleteErr}</p>
           )}
-          <DialogFooter className="gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setDeleteConfirmId(null); setDeleteConfirmName(''); setDeleteError(null) }}
-              disabled={!!deletingId}
-            >
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setDeleteId(null) }} disabled={deleting}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={confirmDelete}
-              disabled={!!deletingId}
-            >
-              {deletingId ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
-              Delete Permanently
+            <Button variant="destructive" size="sm" onClick={confirmDelete} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }
